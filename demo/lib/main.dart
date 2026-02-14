@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:flutter/services.dart';
 
 void main() {
+  // Lock orientation to portrait for mobile
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   runApp(const RISApp());
 }
 
@@ -16,7 +24,7 @@ class RISApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
         scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        fontFamily: 'cursive',
+        fontFamily: 'Ubuntu',
       ),
       home: const RISHomePage(),
     );
@@ -38,14 +46,21 @@ class _RISHomePageState extends State<RISHomePage>
 
   late AnimationController _floatingController;
   late AnimationController _pulseController;
+  late AnimationController _logoController;
+  late AnimationController _searchController;
+  late AnimationController _profileController;
+  late AnimationController _notificationController;
 
   @override
   void initState() {
     super.initState();
+
     _scrollController.addListener(() {
-      setState(() {
-        _scrollOffset = _scrollController.offset;
-      });
+      if (_scrollOffset != _scrollController.offset) {
+        setState(() {
+          _scrollOffset = _scrollController.offset;
+        });
+      }
     });
 
     _floatingController = AnimationController(
@@ -57,6 +72,33 @@ class _RISHomePageState extends State<RISHomePage>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+
+    _logoController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _searchController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _profileController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _notificationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    // Start initial animations
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _logoController.forward();
+      _searchController.forward();
+      _profileController.forward();
+    });
   }
 
   @override
@@ -64,6 +106,10 @@ class _RISHomePageState extends State<RISHomePage>
     _scrollController.dispose();
     _floatingController.dispose();
     _pulseController.dispose();
+    _logoController.dispose();
+    _searchController.dispose();
+    _profileController.dispose();
+    _notificationController.dispose();
     super.dispose();
   }
 
@@ -73,45 +119,49 @@ class _RISHomePageState extends State<RISHomePage>
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
       drawer: _buildDrawer(),
-      body: Stack(
-        children: [
-          CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              _buildAppBar(),
-              SliverList(
-                delegate: SliverChildListDelegate([
-                  _buildHeroSection(),
-                  _buildStatsSection(),
-                  _buildFeaturesSection(),
-                  _buildExamCategoriesSection(),
-                  _buildStudyResourcesSection(),
-                  _buildTestimonialsSection(),
-                  _buildMotivationalSection(),
-                  _buildComingSoonSection(),
-                  _buildFooter(),
-                ]),
-              ),
-            ],
+      body: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          _buildAppBar(),
+          SliverList(
+            delegate: SliverChildListDelegate([
+              _buildHeroSection(),
+              _buildStatsSection(),
+              _buildFeaturesSection(),
+              _buildExamCategoriesSection(),
+              _buildStudyResourcesSection(),
+              _buildMotivationalSection(),
+              _buildFooter(),
+            ]),
           ),
         ],
       ),
       floatingActionButton: _scrollOffset > 500
-          ? FloatingActionButton(
-              onPressed: () {
-                _scrollController.animateTo(
-                  0,
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeInOutCubic,
-                );
-              },
-              child: const Icon(Icons.arrow_upward),
+          ? ScaleTransition(
+              scale: Tween<double>(begin: 0.0, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: _profileController,
+                  curve: Curves.elasticOut,
+                ),
+              ),
+              child: FloatingActionButton(
+                onPressed: () {
+                  _scrollController.animateTo(
+                    0,
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeInOutCubic,
+                  );
+                },
+                backgroundColor: const Color(0xFF2196F3),
+                child: const Icon(Icons.arrow_upward, color: Colors.white),
+              ),
             )
           : null,
     );
   }
 
-  // CUSTOM APP BAR WITH GLASS MORPHISM
+  // MOBILE-OPTIMIZED APP BAR
   Widget _buildAppBar() {
     final opacity = (_scrollOffset / 100).clamp(0.0, 1.0);
 
@@ -122,12 +172,18 @@ class _RISHomePageState extends State<RISHomePage>
       backgroundColor: Colors.white.withOpacity(0.85 + (opacity * 0.15)),
       expandedHeight: 0,
       leading: IconButton(
-        icon: const Icon(Icons.menu_rounded, color: Colors.black87, size: 28),
+        icon: const Icon(Icons.menu_rounded, color: Colors.black87, size: 26),
         onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        splashRadius: 24,
       ),
-      title: Row(
-        children: [
-          GestureDetector(
+      title: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(-1, 0), end: Offset.zero)
+            .animate(
+              CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
+            ),
+        child: FadeTransition(
+          opacity: _logoController,
+          child: GestureDetector(
             onTap: () {
               _scrollController.animateTo(
                 0,
@@ -154,68 +210,94 @@ class _RISHomePageState extends State<RISHomePage>
                 "RIZ",
                 style: TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 24,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Ubuntu',
+                  fontStyle: FontStyle.italic,
+                  fontSize: 20,
                   letterSpacing: 2,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Container(
-              height: 45,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: "Search exams, resources, topics...",
-                  hintStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 22),
-                  suffixIcon: Icon(
-                    Icons.tune_rounded,
-                    size: 22,
-                    color: Colors.grey[600],
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
       actions: [
+        // Search Button (opens search screen)
         IconButton(
           icon: const Icon(
-            Icons.notifications_outlined,
+            Icons.search_rounded,
             color: Colors.black87,
-            size: 26,
+            size: 24,
           ),
-          onPressed: () {},
+          onPressed: () {
+            // Navigate to search screen
+            showSearch(context: context, delegate: ExamSearchDelegate());
+          },
+          splashRadius: 24,
         ),
-        Padding(
-          padding: const EdgeInsets.only(right: 16, left: 8),
-          child: GestureDetector(
-            onTap: () {},
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+        // Notification with Pulse animation
+        AnimatedBuilder(
+          animation: _notificationController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: 1.0 + (_notificationController.value * 0.1),
+              child: IconButton(
+                icon: Icon(
+                  Icons.notifications_outlined,
+                  color: Colors.black87,
+                  size: 24,
+                  shadows: [
+                    Shadow(
+                      color: Colors.blue.withOpacity(
+                        _notificationController.value * 0.3,
+                      ),
+                      blurRadius: 10,
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8),
-                ],
+                onPressed: () {
+                  // Show notifications
+                  _showNotifications();
+                },
+                splashRadius: 24,
               ),
-              child: const CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: Color(0xFF2196F3), size: 22),
+            );
+          },
+        ),
+        // Profile with animation
+        Padding(
+          padding: const EdgeInsets.only(right: 12, left: 4),
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.0, end: 1.0).animate(
+              CurvedAnimation(
+                parent: _profileController,
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: GestureDetector(
+              onTap: () {
+                // Navigate to profile
+                _navigateToProfile();
+              },
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.3),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: const CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person, color: Color(0xFF2196F3), size: 20),
+                ),
               ),
             ),
           ),
@@ -224,33 +306,25 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // HERO SECTION WITH PARALLAX
+  // MOBILE-OPTIMIZED HERO SECTION
   Widget _buildHeroSection() {
-    final parallax = _scrollOffset * 0.5;
+    final parallax = _scrollOffset * 0.3; // Reduced for mobile
 
     return Container(
-      height: 700,
+      height: MediaQuery.of(context).size.height * 0.75, // Responsive height
       child: Stack(
         children: [
           // Background with Parallax
           Transform.translate(
             offset: Offset(0, parallax),
             child: Container(
-              height: 750,
+              height: MediaQuery.of(context).size.height * 0.8,
               decoration: BoxDecoration(
                 image: const DecorationImage(
                   image: NetworkImage(
-                    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071',
+                    'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=2070',
                   ),
                   fit: BoxFit.cover,
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.6),
-                    Colors.black.withOpacity(0.3),
-                  ],
                 ),
               ),
               child: Container(
@@ -259,8 +333,8 @@ class _RISHomePageState extends State<RISHomePage>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withOpacity(0.5),
-                      Colors.blue.withOpacity(0.3),
+                      Colors.black.withOpacity(0.6),
+                      Colors.blue.withOpacity(0.4),
                     ],
                   ),
                 ),
@@ -268,138 +342,124 @@ class _RISHomePageState extends State<RISHomePage>
             ),
           ),
 
-          // COMING SOON BANNER - Positioned at top (matching uploaded image design,
-
-          // Floating Elements Animation
-          AnimatedBuilder(
-            animation: _floatingController,
-            builder: (context, child) {
-              return Positioned(
-                top: 100 + (_floatingController.value * 20),
-                right: 50,
-                child: Opacity(
-                  opacity: 0.1,
-                  child: Icon(
-                    Icons.auto_stories_rounded,
-                    size: 150,
-                    color: Colors.white,
-                  ),
-                ),
-              );
-            },
-          ),
-
           // Content
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TweenAnimationBuilder(
-                    tween: Tween<double>(begin: 0, end: 1),
-                    duration: const Duration(milliseconds: 1200),
-                    curve: Curves.easeOut,
-                    builder: (context, double value, child) {
-                      return Opacity(
-                        opacity: value,
-                        child: Transform.translate(
-                          offset: Offset(0, 30 * (1 - value)),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
+          SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TweenAnimationBuilder(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 1500),
+                      curve: Curves.easeOut,
+                      builder: (context, double value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 30 * (1 - value)),
+                            child: child,
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.2),
-                            border: Border.all(
-                              color: Colors.orangeAccent,
-                              width: 2,
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
                             ),
-                            borderRadius: BorderRadius.circular(30),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.2),
+                              border: Border.all(
+                                color: Colors.orangeAccent,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: const Text(
+                              "🎯 YOUR SUCCESS STARTS HERE",
+                              style: TextStyle(
+                                color: Colors.orangeAccent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'Ubuntu',
+                                fontStyle: FontStyle.italic,
+                                letterSpacing: 1,
+                              ),
+                            ),
                           ),
-                          child: const Text(
-                            "🎯 YOUR SUCCESS JOURNEY STARTS HERE",
+                          const SizedBox(height: 24),
+                          const Text(
+                            "Ace Government",
+                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.orangeAccent,
+                              color: Colors.white,
+                              fontSize: 36,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: 'Ubuntu',
+                              height: 1.1,
+                              shadows: [
+                                Shadow(blurRadius: 20, color: Colors.black87),
+                              ],
+                            ),
+                          ),
+                          const Text(
+                            "Sector Exams",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF64B5F6),
+                              fontSize: 36,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: 'Ubuntu',
+                              height: 1.1,
+                              shadows: [
+                                Shadow(blurRadius: 20, color: Colors.black87),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            "Comprehensive preparation for TNPSC, UPSC, SSC, Banking & more",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white70,
                               fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.2,
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'Ubuntu',
+                              fontStyle: FontStyle.italic,
+                              height: 1.5,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 30),
-                        const Text(
-                          "Ace Government",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 56,
-                            fontWeight: FontWeight.w900,
-                            height: 1.1,
-                            shadows: [
-                              Shadow(blurRadius: 20, color: Colors.black87),
+                          const SizedBox(height: 32),
+                          Column(
+                            children: [
+                              _buildMobileCTAButton(
+                                "Start Learning",
+                                Icons.rocket_launch_rounded,
+                                true,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildMobileCTAButton(
+                                "Explore Resources",
+                                Icons.explore_rounded,
+                                true,
+                              ),
                             ],
                           ),
-                        ),
-                        const Text(
-                          "Sector Exams",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Color(0xFF64B5F6),
-                            fontSize: 56,
-                            fontWeight: FontWeight.w900,
-                            height: 1.1,
-                            shadows: [
-                              Shadow(blurRadius: 20, color: Colors.black87),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          "Comprehensive preparation platform for UPSC, SSC, Banking,\nRailways & more. Your one-stop solution for success.",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 18,
-                            height: 1.6,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 50),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildCTAButton(
-                              "Start Learning",
-                              Icons.rocket_launch_rounded,
-                              true,
-                            ),
-                            const SizedBox(width: 20),
-                            _buildCTAButton(
-                              "Explore Resources",
-                              Icons.explore_rounded,
-                              false,
-                            ),
-                          ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
 
           // Scroll Indicator
           Positioned(
-            bottom: 30,
+            bottom: 20,
             left: 0,
             right: 0,
             child: AnimatedBuilder(
@@ -413,15 +473,17 @@ class _RISHomePageState extends State<RISHomePage>
                         "Scroll to explore",
                         style: TextStyle(
                           color: Colors.white70,
-                          fontSize: 12,
-                          letterSpacing: 1,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Ubuntu',
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Icon(
                         Icons.keyboard_arrow_down_rounded,
                         color: Colors.white70,
-                        size: 30 + (_pulseController.value * 5),
+                        size: 24 + (_pulseController.value * 4),
                       ),
                     ],
                   ),
@@ -434,45 +496,49 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // CTA BUTTON
-  Widget _buildCTAButton(String text, IconData icon, bool isPrimary) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: isPrimary
-            ? [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.4),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ]
-            : [],
-      ),
-      child: ElevatedButton.icon(
-        onPressed: () {},
-        icon: Icon(icon, size: 20),
-        label: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
+  // MOBILE CTA BUTTON
+  Widget _buildMobileCTAButton(String text, IconData icon, bool isPrimary) {
+    return SizedBox(
+      width: double.infinity,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: isPrimary
+              ? [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : [],
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isPrimary
-              ? const Color(0xFF2196F3)
-              : Colors.white.withOpacity(0.15),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-            side: isPrimary
-                ? BorderSide.none
-                : const BorderSide(color: Colors.white54, width: 2),
+        child: ElevatedButton.icon(
+          onPressed: () {},
+          icon: Icon(icon, size: 20),
+          label: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Ubuntu',
+              letterSpacing: 0.5,
+            ),
           ),
-          elevation: isPrimary ? 8 : 0,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isPrimary
+                ? const Color(0xFF2196F3)
+                : Colors.white.withOpacity(0.15),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+              side: isPrimary
+                  ? BorderSide.none
+                  : const BorderSide(color: Colors.white54, width: 2),
+            ),
+            elevation: isPrimary ? 8 : 0,
+          ),
         ),
       ),
     );
@@ -481,39 +547,35 @@ class _RISHomePageState extends State<RISHomePage>
   // STATS SECTION
   Widget _buildStatsSection() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: [Colors.white, Colors.grey[50]!]),
       ),
       child: Column(
         children: [
           const Text(
-            "Experience the flawless preparation platform for competitive exams",
+            "Trusted Preparation Platform",
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
               color: Color(0xFF1976D2),
+              fontFamily: 'Ubuntu',
             ),
           ),
-          const SizedBox(height: 50),
-          Wrap(
-            spacing: 40,
-            runSpacing: 40,
-            alignment: WrapAlignment.center,
-            children: [
-              _buildStatCard(
-                "1000+",
-                "Study Resources",
-                Icons.library_books_rounded,
-                Colors.purple,
-              ),
-              _buildStatCard(
-                "500+",
-                "Mock Tests",
-                Icons.quiz_rounded,
-                Colors.orange,
-              ),
-            ],
+          const SizedBox(height: 40),
+          _buildStatCard(
+            "1000+",
+            "Study Resources",
+            Icons.library_books_rounded,
+            Colors.purple,
+          ),
+          const SizedBox(height: 20),
+          _buildStatCard(
+            "500+",
+            "Practice Questions",
+            Icons.quiz_rounded,
+            Colors.orange,
           ),
         ],
       ),
@@ -536,8 +598,8 @@ class _RISHomePageState extends State<RISHomePage>
         );
       },
       child: Container(
-        width: 220,
-        padding: const EdgeInsets.all(30),
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -550,32 +612,41 @@ class _RISHomePageState extends State<RISHomePage>
           ],
           border: Border.all(color: color.withOpacity(0.2), width: 2),
         ),
-        child: Column(
+        child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 40, color: color),
+              child: Icon(icon, size: 32, color: color),
             ),
-            const SizedBox(height: 20),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.w900,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black54,
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: color,
+                      fontFamily: 'Ubuntu',
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black54,
+                      fontFamily: 'Ubuntu',
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -584,639 +655,432 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // FEATURES SECTION
+  // FEATURES SECTION (Mobile GridView)
   Widget _buildFeaturesSection() {
+    final features = [
+      {
+        'title': 'Digital Flashcards',
+        'desc': 'Smart adaptive learning',
+        'icon': Icons.auto_awesome_rounded,
+        'color': Colors.purple,
+      },
+      {
+        'title': 'PYQ\'s',
+        'desc': 'PYQ database',
+        'icon': Icons.history_edu_rounded,
+        'color': Colors.blue,
+      },
+      {
+        'title': 'Study Vault',
+        'desc': 'Organized materials',
+        'icon': Icons.folder_special_rounded,
+        'color': Colors.orange,
+      },
+    ];
+
+    // Get screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth =
+        (screenWidth - 56) /
+        2; // 56 = 20 (left padding) + 20 (right padding) + 16 (spacing)
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.centerLeft,
+          end: Alignment.center,
           colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
         ),
       ),
       child: Column(
         children: [
           const Text(
-            "Powerful Features for Your Success",
+            "Powerful Features",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w800,
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
               color: Colors.white,
+              fontFamily: 'Ubuntu',
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           const Text(
-            "Everything you need to excel in competitive exams",
-            style: TextStyle(fontSize: 18, color: Colors.white70),
+            "Everything you need to excel",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.white70,
+              fontFamily: 'Ubuntu',
+            ),
           ),
-          const SizedBox(height: 60),
+          const SizedBox(height: 40),
+
+          // Using Wrap with center alignment to center the third card
           Wrap(
-            spacing: 30,
-            runSpacing: 30,
-            alignment: WrapAlignment.center,
-            children: [
-              _buildFeatureCard(
-                "AI-Powered Flashcards",
-                "Smart learning with adaptive flashcards",
-                Icons.auto_awesome_rounded,
-                Colors.purple,
-                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070",
-              ),
-              _buildFeatureCard(
-                "Previous Year Papers",
-                "Comprehensive PYQ database with solutions",
-                Icons.history_edu_rounded,
-                Colors.blue,
-                "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=2073",
-              ),
-              _buildFeatureCard(
-                "Study Vault",
-                "Organized study materials at your fingertips",
-                Icons.folder_special_rounded,
-                Colors.orange,
-                "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=2128",
-              ),
-              _buildFeatureCard(
-                "Mock Tests",
-                "Real exam environment simulation",
-                Icons.quiz_rounded,
-                Colors.green,
-                "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=2070",
-              ),
-              _buildFeatureCard(
-                "Progress Tracking",
-                "Monitor your growth with analytics",
-                Icons.trending_up_rounded,
-                Colors.teal,
-                "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2070",
-              ),
-              _buildFeatureCard(
-                "Study Links Hub",
-                "Curated resources from across the web",
-                Icons.link_rounded,
-                Colors.indigo,
-                "https://images.unsplash.com/photo-1488998427799-e3362cec87c3?q=80&w=2070",
-              ),
-            ],
+            spacing: 16,
+            runSpacing: 16,
+            alignment: WrapAlignment.center, // This centers the items
+            children: features.map((feature) {
+              return SizedBox(
+                width: cardWidth,
+                child: _buildMobileFeatureCard(
+                  feature['title'] as String,
+                  feature['desc'] as String,
+                  feature['icon'] as IconData,
+                  feature['color'] as Color,
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFeatureCard(
+  Widget _buildMobileFeatureCard(
     String title,
     String desc,
     IconData icon,
     Color color,
-    String imageUrl,
   ) {
-    return TweenAnimationBuilder(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 600),
-      builder: (context, double value, child) {
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(opacity: value, child: child),
-        );
+    return GestureDetector(
+      onTap: () {
+        // Navigate to feature details
       },
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () {},
-          child: Container(
-            width: 340,
-            height: 280,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 25,
-                  offset: const Offset(0, 15),
-                ),
-              ],
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 140,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
-                    ),
-                    image: DecorationImage(
-                      image: NetworkImage(imageUrl),
-                      fit: BoxFit.cover,
-                      colorFilter: ColorFilter.mode(
-                        color.withOpacity(0.3),
-                        BlendMode.multiply,
-                      ),
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: 16,
-                        right: 16,
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: color.withOpacity(0.3),
-                                blurRadius: 10,
-                              ),
-                            ],
-                          ),
-                          child: Icon(icon, color: color, size: 28),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        desc,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Text(
-                            "Explore",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: color,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            color: color,
-                            size: 16,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 32),
             ),
-          ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+                fontFamily: 'Ubuntu',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              desc,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontFamily: 'Ubuntu',
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // EXAM CATEGORIES SECTION
+  // EXAM CATEGORIES (Mobile ScrollView)
   Widget _buildExamCategoriesSection() {
+    final categories = [
+      {
+        'title': 'TNPSC',
+        'subtitle': 'State Services',
+        'color': const Color(0xFFBDB76B),
+        'icon': Icons.public_rounded,
+      },
+      {
+        'title': 'UPSC',
+        'subtitle': 'Civil Services',
+        'color': const Color(0xFF1976D2),
+        'icon': Icons.account_balance_rounded,
+      },
+      {
+        'title': 'SSC',
+        'subtitle': 'Staff Selection',
+        'color': const Color(0xFF7B1FA2),
+        'icon': Icons.work_rounded,
+      },
+      {
+        'title': 'Banking',
+        'subtitle': 'IBPS & SBI',
+        'color': const Color(0xFFE65100),
+        'icon': Icons.account_balance_wallet_rounded,
+      },
+      {
+        'title': 'Railways',
+        'subtitle': 'RRB Exams',
+        'color': const Color(0xFF00695C),
+        'icon': Icons.train_rounded,
+      },
+      {
+        'title': 'Defence',
+        'subtitle': 'CDS & NDA',
+        'color': const Color(0xFFD32F2F),
+        'icon': Icons.shield_rounded,
+      },
+    ];
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 60),
       color: Colors.white,
       child: Column(
         children: [
-          const Text(
-            "Choose Your Exam Category",
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF1976D2),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              "Choose Your Category",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1976D2),
+                fontFamily: 'Ubuntu',
+              ),
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            "Specialized preparation for every competitive exam",
-            style: TextStyle(fontSize: 18, color: Colors.black54),
-          ),
-          const SizedBox(height: 60),
-          Wrap(
-            spacing: 24,
-            runSpacing: 24,
-            alignment: WrapAlignment.center,
-            children: [
-              _buildExamCategory(
-                "UPSC",
-                "Civil Services",
-                Icons.account_balance_rounded,
-                const Color(0xFF1976D2),
-                "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070",
-              ),
-              _buildExamCategory(
-                "SSC",
-                "Staff Selection",
-                Icons.work_rounded,
-                const Color(0xFF7B1FA2),
-                "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=2070",
-              ),
-              _buildExamCategory(
-                "Banking",
-                "IBPS & SBI",
-                Icons.account_balance_wallet_rounded,
-                const Color(0xFFE65100),
-                "https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?q=80&w=2070",
-              ),
-              _buildExamCategory(
-                "Railways",
-                "RRB Exams",
-                Icons.train_rounded,
-                const Color(0xFF00695C),
-                "https://images.unsplash.com/photo-1474487548417-781cb71495f3?q=80&w=2084",
-              ),
-              _buildExamCategory(
-                "Defence",
-                "CDS & NDA",
-                Icons.shield_rounded,
-                const Color(0xFFD32F2F),
-                "https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?q=80&w=2080",
-              ),
-              _buildExamCategory(
-                "State PSC",
-                "Regional Exams",
-                Icons.location_city_rounded,
-                const Color(0xFF0288D1),
-                "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070",
-              ),
-            ],
+          const SizedBox(height: 32),
+          SizedBox(
+            height: 140,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final cat = categories[index];
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: _buildMobileExamCategory(
+                    cat['title'] as String,
+                    cat['subtitle'] as String,
+                    cat['icon'] as IconData,
+                    cat['color'] as Color,
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildExamCategory(
+  Widget _buildMobileExamCategory(
     String title,
     String subtitle,
     IconData icon,
     Color color,
-    String imageUrl,
   ) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {},
-        child: Container(
-          width: 260,
-          height: 180,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+    return GestureDetector(
+      onTap: () {
+        // Navigate to category
+      },
+      child: Container(
+        width: 160,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [color, color.withOpacity(0.8)],
           ),
-          child: Stack(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  image: DecorationImage(
-                    image: NetworkImage(imageUrl),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [color.withOpacity(0.8), color.withOpacity(0.95)],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(icon, color: Colors.white, size: 32),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
-      ),
-    );
-  }
-
-  // STUDY RESOURCES SECTION
-  Widget _buildStudyResourcesSection() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.grey[100]!, Colors.white]),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            "Latest Study Resources",
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF1976D2),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            "Freshly updated materials to keep you ahead",
-            style: TextStyle(fontSize: 18, color: Colors.black54),
-          ),
-          const SizedBox(height: 60),
-          Wrap(
-            spacing: 24,
-            runSpacing: 24,
-            alignment: WrapAlignment.center,
-            children: [
-              _buildResourceCard(
-                "Current Affairs 2025",
-                "Updated daily with latest events",
-                "https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=2070",
-                "234 Articles",
-              ),
-              _buildResourceCard(
-                "Quantitative Aptitude",
-                "Complete guide with shortcuts",
-                "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=2070",
-                "180 Topics",
-              ),
-              _buildResourceCard(
-                "General Knowledge",
-                "Comprehensive GK database",
-                "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=2070",
-                "500+ Facts",
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResourceCard(
-    String title,
-    String desc,
-    String imageUrl,
-    String stat,
-  ) {
-    return Container(
-      width: 320,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 180,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              image: DecorationImage(
-                image: NetworkImage(imageUrl),
-                fit: BoxFit.cover,
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.article_rounded,
-                          size: 16,
-                          color: Color(0xFF1976D2),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          stat,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1976D2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, color: Colors.white, size: 32),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
                   style: const TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    fontFamily: 'Ubuntu',
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
-                  desc,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2196F3),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "Start Learning",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white70,
+                    fontFamily: 'Ubuntu',
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // TESTIMONIALS SECTION
-  Widget _buildTestimonialsSection() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1976D2), Color(0xFF0D47A1)],
+          ],
         ),
       ),
-      child: Column(children: []),
     );
   }
 
-  Widget _buildTestimonialCard(
-    String name,
-    String achievement,
-    String testimonial,
-    String imageUrl,
-  ) {
+  // STUDY RESOURCES
+  Widget _buildStudyResourcesSection() {
     return Container(
-      width: 340,
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        gradient: LinearGradient(colors: [Colors.grey[50]!, Colors.white]),
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              CircleAvatar(radius: 32, backgroundImage: NetworkImage(imageUrl)),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      achievement,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2196F3),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(
-            '"$testimonial"',
+          const Text(
+            "Latest Study Resources",
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15,
-              color: Colors.grey[700],
-              height: 1.6,
-              fontStyle: FontStyle.italic,
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Ubuntu',
+              color: Color(0xFF1976D2),
             ),
+          ),
+          const SizedBox(height: 32),
+          _buildMobileResourceCard(
+            "Current Affairs->",
+            "Updated daily with latest events",
+            "✅",
+            Icons.article_rounded,
+            Colors.blue,
           ),
           const SizedBox(height: 16),
-          Row(
-            children: List.generate(
-              5,
-              (index) =>
-                  const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
-            ),
+          _buildMobileResourceCard(
+            "Quantitative Aptitude->",
+            "Complete guide with shortcuts",
+            "✅",
+            Icons.calculate_rounded,
+            Colors.purple,
+          ),
+          const SizedBox(height: 16),
+          _buildMobileResourceCard(
+            "General Knowledge->",
+            "Comprehensive GK database",
+            "✅",
+            Icons.public_rounded,
+            Colors.orange,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMobileResourceCard(
+    String title,
+    String desc,
+    String stat,
+    IconData icon,
+    Color color,
+  ) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                      fontFamily: 'Ubuntu',
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    desc,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      fontFamily: 'Ubuntu',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      stat,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                        fontFamily: 'Ubuntu',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1224,427 +1088,60 @@ class _RISHomePageState extends State<RISHomePage>
   // MOTIVATIONAL SECTION
   Widget _buildMotivationalSection() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 100, horizontal: 24),
-      decoration: BoxDecoration(
-        image: const DecorationImage(
-          image: NetworkImage(
-            'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?q=80&w=2073',
-          ),
-          fit: BoxFit.cover,
-        ),
-        gradient: LinearGradient(
-          colors: [
-            Colors.black.withOpacity(0.7),
-            Colors.black.withOpacity(0.5),
-          ],
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withOpacity(0.6),
-              Colors.blue.withOpacity(0.4),
-            ],
-          ),
-        ),
-        child: Column(
-          children: [
-            // Dr. APJ Abdul Kalam's Image/Icon
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.orangeAccent, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.orangeAccent.withOpacity(0.3),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: const CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.white,
-                child: Icon(
-                  Icons.auto_stories_rounded,
-                  size: 50,
-                  color: Color(0xFF2196F3),
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
-            const Icon(
-              Icons.format_quote_rounded,
-              size: 50,
-              color: Colors.orangeAccent,
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              '"DREAM IS NOT THAT WHICH YOU SEE\nWHILE SLEEPING,\nIT IS SOMETHING THAT DOES NOT\nLET YOU SLEEP"',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-                height: 1.5,
-                letterSpacing: 0.8,
-                shadows: [Shadow(blurRadius: 15, color: Colors.black)],
-              ),
-            ),
-            const SizedBox(height: 25),
-            Text(
-              "- Dr. APJ Abdul Kalam",
-              style: TextStyle(
-                color: Colors.orangeAccent.withOpacity(0.95),
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: 15),
-            Text(
-              "Missile Man of India • People's President",
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 60),
-            Container(
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white30, width: 2),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    "Dr. Kalam's Words of Wisdom",
-                    style: TextStyle(
-                      color: Colors.orangeAccent,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      fontStyle: FontStyle.italic,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 25),
-                  const Text(
-                    "🌟 \"All of us do not have equal talent. But, all of us\nhave an equal opportunity to develop our talents.\"\n\n"
-                    "💡 \"If you want to shine like a sun,\nfirst burn like a sun.\"\n\n"
-                    "📚 \"Learning gives creativity,\ncreativity leads to thinking,\nthinking provides knowledge,\nknowledge makes you great.\"\n\n"
-                    "🎯 \"You have to dream before your\ndreams can come true.\"",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      height: 2.4,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // COMING SOON / UNDER MAINTENANCE SECTION
-  Widget _buildComingSoonSection() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 100, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF1A237E),
-            const Color(0xFF0D47A1),
-            const Color(0xFF01579B),
-          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [const Color(0xFF1976D2), const Color(0xFF0D47A1)],
         ),
       ),
       child: Column(
         children: [
-          // Animated Icon
-          AnimatedBuilder(
-            animation: _floatingController,
-            builder: (context, child) {
-              return Transform.translate(
-                offset: Offset(0, _floatingController.value * 15),
-                child: Transform.rotate(
-                  angle: _floatingController.value * 0.1,
-                  child: Container(
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.orange.withOpacity(0.3),
-                          Colors.deepOrange.withOpacity(0.3),
-                        ],
-                      ),
-                      border: Border.all(color: Colors.white30, width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.orange.withOpacity(0.3),
-                          blurRadius: 30,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.rocket_launch_rounded,
-                      size: 80,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 50),
-
-          // Main Heading
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: 1.0 + (_pulseController.value * 0.02),
-                child: child,
-              );
-            },
-            child: const Text(
-              "🎉 EXCITING NEWS!",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.orangeAccent,
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2,
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.orangeAccent, width: 2),
+            ),
+            child: const CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.white,
+              child: Icon(
+                Icons.auto_stories_rounded,
+                size: 40,
+                color: Color(0xFF2196F3),
               ),
             ),
           ),
-          const SizedBox(height: 20),
-
+          const SizedBox(height: 24),
+          const Icon(
+            Icons.format_quote_rounded,
+            size: 40,
+            color: Colors.orangeAccent,
+          ),
+          const SizedBox(height: 16),
           const Text(
-            "Mobile App Launching Soon",
+            '"Dream is not what you see while sleeping,\nit is something that does not let you sleep"',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
-              fontSize: 48,
-              fontWeight: FontWeight.w900,
-              height: 1.2,
-              shadows: [Shadow(blurRadius: 20, color: Colors.black54)],
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Ubuntu',
+              fontStyle: FontStyle.italic,
+              height: 1.5,
             ),
-          ),
-          const SizedBox(height: 30),
-
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: Colors.white30, width: 2),
-            ),
-            child: const Text(
-              "⚙️ Currently Under Development & Maintenance",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: 30),
-
-          // Dr. Kalam's Quote for Launch Section
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.orangeAccent.withOpacity(0.3),
-                width: 2,
-              ),
-            ),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.format_quote_rounded,
-                  color: Colors.orangeAccent,
-                  size: 30,
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  '"Excellence is a continuous process\nand not an accident."',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    fontStyle: FontStyle.italic,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "- Dr. APJ Abdul Kalam",
-                  style: TextStyle(
-                    color: Colors.orangeAccent.withOpacity(0.9),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 30),
-
-          const Text(
-            "We're working hard to bring you the best exam preparation experience\non mobile. Stay tuned for the official launch!",
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70, fontSize: 18, height: 1.6),
-          ),
-          const SizedBox(height: 60),
-
-          // Feature Preview Cards
-          Wrap(
-            spacing: 24,
-            runSpacing: 24,
-            alignment: WrapAlignment.center,
-            children: [
-              _buildComingSoonFeature(
-                Icons.phone_android_rounded,
-                "Native App",
-                "iOS & Android",
-                Colors.blue,
-              ),
-              _buildComingSoonFeature(
-                Icons.offline_bolt_rounded,
-                "Offline Mode",
-                "Study Anywhere",
-                Colors.green,
-              ),
-              _buildComingSoonFeature(
-                Icons.notifications_active_rounded,
-                "Smart Alerts",
-                "Stay Updated",
-                Colors.orange,
-              ),
-              _buildComingSoonFeature(
-                Icons.sync_rounded,
-                "Cloud Sync",
-                "Cross Device",
-                Colors.purple,
-              ),
-            ],
-          ),
-          const SizedBox(height: 60),
-
-          // Notify Me Button
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.orange.withOpacity(0.5),
-                  blurRadius: 30,
-                  offset: const Offset(0, 15),
-                ),
-              ],
-            ),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // Show notification signup dialog
-              },
-              icon: const Icon(Icons.notifications_active_rounded, size: 24),
-              label: const Text(
-                "Notify Me When Launched",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 48,
-                  vertical: 24,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                elevation: 0,
-              ),
-            ),
-          ),
-          const SizedBox(height: 30),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildComingSoonFeature(
-    IconData icon,
-    String title,
-    String subtitle,
-    Color color,
-  ) {
-    return Container(
-      width: 200,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
-              border: Border.all(color: color.withOpacity(0.5), width: 2),
-            ),
-            child: Icon(icon, size: 36, color: color),
           ),
           const SizedBox(height: 16),
           Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
+            "- Dr. APJ Abdul Kalam",
             style: TextStyle(
-              fontSize: 13,
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.orangeAccent.withOpacity(0.95),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Ubuntu',
+              fontStyle: FontStyle.italic,
             ),
           ),
         ],
@@ -1655,56 +1152,41 @@ class _RISHomePageState extends State<RISHomePage>
   // FOOTER
   Widget _buildFooter() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
       color: const Color(0xFF1A1A1A),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  "RIZ",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 28,
-                    letterSpacing: 2,
-                  ),
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
               ),
-            ],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              "RIZ",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 24,
+                letterSpacing: 2,
+                fontFamily: 'Ubuntu',
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 20),
           const Text(
             "Empowering aspirants to achieve their dreams",
-            style: TextStyle(color: Colors.white70, fontSize: 16),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+              fontFamily: 'Ubuntu',
+            ),
           ),
-          const SizedBox(height: 40),
-          Wrap(
-            spacing: 40,
-            runSpacing: 20,
-            alignment: WrapAlignment.center,
-            children: [
-              _buildFooterLink("About Us"),
-              _buildFooterLink("Courses"),
-              _buildFooterLink("Resources"),
-              _buildFooterLink("Blog"),
-              _buildFooterLink("Contact"),
-              _buildFooterLink("Privacy Policy"),
-            ],
-          ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1712,28 +1194,28 @@ class _RISHomePageState extends State<RISHomePage>
               const SizedBox(width: 16),
               _buildSocialIcon(Icons.telegram_rounded),
               const SizedBox(width: 16),
-              _buildSocialIcon(Icons.youtube_searched_for_rounded),
-              const SizedBox(width: 16),
               _buildSocialIcon(Icons.email_rounded),
             ],
           ),
-          const SizedBox(height: 40),
-          Container(height: 1, width: 300, color: Colors.white24),
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
+          Container(height: 1, width: 200, color: Colors.white24),
+          const SizedBox(height: 20),
           Text(
-            "© 2025 RIZ Learning Hub. All rights reserved.",
+            "© 2026 RIZ Learning Hub",
             style: TextStyle(
               color: Colors.white.withOpacity(0.5),
-              fontSize: 14,
+              fontSize: 12,
+              fontFamily: 'Ubuntu',
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           const Text(
             "Made with ❤️ for every aspiring achiever",
             style: TextStyle(
               color: Colors.orangeAccent,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
+              fontFamily: 'Ubuntu',
             ),
           ),
         ],
@@ -1741,42 +1223,22 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  Widget _buildFooterLink(String text) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {},
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildSocialIcon(IconData icon) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {},
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white24),
-          ),
-          child: Icon(icon, color: Colors.white70, size: 20),
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white24),
         ),
+        child: Icon(icon, color: Colors.white70, size: 18),
       ),
     );
   }
 
-  // DRAWER
+  // DRAWER (Mobile Navigation)
   Widget _buildDrawer() {
     return Drawer(
       child: Container(
@@ -1787,67 +1249,77 @@ class _RISHomePageState extends State<RISHomePage>
             colors: [Color(0xFF2196F3), Color(0xFF1565C0)],
           ),
         ),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(color: Colors.transparent),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'RIZ',
-                      style: TextStyle(
-                        color: Color(0xFF2196F3),
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 2,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'RIZ',
+                        style: TextStyle(
+                          color: Color(0xFF2196F3),
+                          fontSize: 28,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 2,
+                          fontFamily: 'Ubuntu',
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Learning Hub',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Learning Hub',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Ubuntu',
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            _buildDrawerItem(Icons.dashboard_rounded, 'Dashboard', true),
-            _buildDrawerItem(
-              Icons.add_box_rounded,
-              'Add Study Materials',
-              false,
-            ),
-            _buildDrawerItem(Icons.style_rounded, 'AI Flashcards', false),
-            _buildDrawerItem(Icons.link_rounded, 'Study Links', false),
-            _buildDrawerItem(
-              Icons.history_edu_rounded,
-              "PYQ's (Past Papers)",
-              false,
-            ),
-            const Divider(color: Colors.white30, height: 32),
-            _buildDrawerItem(Icons.settings_rounded, 'Settings', false),
-            _buildDrawerItem(
-              Icons.help_outline_rounded,
-              'Help & Support',
-              false,
-            ),
-          ],
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _buildDrawerItem(Icons.home_rounded, 'Home', true),
+                    _buildDrawerItem(
+                      Icons.style_rounded,
+                      'Digital Flashcards',
+                      true,
+                    ),
+                    _buildDrawerItem(Icons.history_edu_rounded, "PYQ's", true),
+                    _buildDrawerItem(Icons.link_rounded, 'Study Links', true),
+                    const Divider(
+                      color: Colors.white30,
+                      height: 32,
+                      indent: 20,
+                      endIndent: 20,
+                    ),
+                    _buildDrawerItem(Icons.settings_rounded, 'Settings', true),
+                    _buildDrawerItem(
+                      Icons.help_outline_rounded,
+                      'Help & Support',
+                      true,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1861,26 +1333,135 @@ class _RISHomePageState extends State<RISHomePage>
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        leading: Icon(icon, color: Colors.white, size: 24),
+        leading: Icon(icon, color: Colors.white, size: 22),
         title: Text(
           title,
           style: const TextStyle(
             color: Colors.white,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             fontSize: 15,
+            fontFamily: 'Ubuntu',
           ),
         ),
         trailing: isActive
             ? const Icon(
                 Icons.arrow_forward_ios_rounded,
                 color: Colors.white,
-                size: 16,
+                size: 14,
               )
             : null,
-        onTap: () {
-          Navigator.pop(context);
-        },
+        onTap: () => Navigator.pop(context),
       ),
+    );
+  }
+
+  // Helper Methods
+  void _showNotifications() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Notifications',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Ubuntu',
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'No new notifications',
+              style: TextStyle(fontFamily: 'Ubuntu'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToProfile() {
+    // Navigate to profile screen
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Profile feature coming soon!',
+          style: TextStyle(fontFamily: 'Ubuntu'),
+        ),
+      ),
+    );
+  }
+}
+
+// Search Delegate for Mobile
+class ExamSearchDelegate extends SearchDelegate<String> {
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    return ThemeData(
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF2196F3),
+        elevation: 0,
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        border: InputBorder.none,
+        hintStyle: TextStyle(color: Colors.white70, fontFamily: 'Ubuntu'),
+      ),
+      textTheme: const TextTheme(
+        titleLarge: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontFamily: 'Ubuntu',
+        ),
+      ),
+    );
+  }
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(icon: const Icon(Icons.clear), onPressed: () => query = ''),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, ''),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return Center(
+      child: Text(
+        'Search results for: $query',
+        style: const TextStyle(fontFamily: 'Ubuntu'),
+      ),
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final suggestions = ['UPSC', 'SSC', 'Banking', 'TNPSC', 'Railways'];
+    final filtered = suggestions
+        .where((s) => s.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+
+    return ListView.builder(
+      itemCount: filtered.length,
+      itemBuilder: (context, index) {
+        return ListTile(
+          title: Text(
+            filtered[index],
+            style: const TextStyle(fontFamily: 'Ubuntu'),
+          ),
+          onTap: () => query = filtered[index],
+        );
+      },
     );
   }
 }
