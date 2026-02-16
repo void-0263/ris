@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "740856985219",
+    "project_id": "riz-learing",
+    "storage_bucket": "riz-learing.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:740856985219:android:cb98f2dbb3320de37f4db6",
+        "android_client_info": {
+          "package_name": "com.example.riz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdgDr2IP3m3dDXtskJIrLPYAeIF7ZeSkA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

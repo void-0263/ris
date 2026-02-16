@@ -1,14 +1,45 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
+import 'dart:math';
 import 'package:flutter/services.dart';
+import 'package:visibility_detector/visibility_detector.dart';
+import 'loading_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'firebase_options.dart';
+import 'notification_service.dart';
+import 'profile_screen.dart';
+import 'profile_service.dart';
+import 'current_affairs_screen.dart';
+import 'quantitative_aptitude_screen.dart';
+import 'general_knowledge_screen.dart';
+import 'categories_section.dart';
+import 'feature_screens.dart'; // 👈 ADDED
 
-void main() {
-  // Lock orientation to portrait for mobile
+// ✅ CRITICAL: Background handler MUST be at top level (outside any class)
+@pragma('vm:entry-point')
+Future<void> _backgroundMessageHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('📱 Background message received: ${message.messageId}');
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('✅ Firebase initialized successfully!');
+  } catch (e) {
+    print('⚠️ Firebase init: $e');
+  }
+
+  FirebaseMessaging.onBackgroundMessage(_backgroundMessageHandler);
 
   runApp(const RISApp());
 }
@@ -26,7 +57,7 @@ class RISApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF8F9FA),
         fontFamily: 'Ubuntu',
       ),
-      home: const RISHomePage(),
+      home: const AppWithLoading(),
     );
   }
 }
@@ -54,6 +85,8 @@ class _RISHomePageState extends State<RISHomePage>
   @override
   void initState() {
     super.initState();
+
+    ProfileService().updateStreak();
 
     _scrollController.addListener(() {
       if (_scrollOffset != _scrollController.offset) {
@@ -93,7 +126,6 @@ class _RISHomePageState extends State<RISHomePage>
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    // Start initial animations
     Future.delayed(const Duration(milliseconds: 100), () {
       _logoController.forward();
       _searchController.forward();
@@ -113,6 +145,28 @@ class _RISHomePageState extends State<RISHomePage>
     super.dispose();
   }
 
+  void _scrollToCategories() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final targetPosition = (screenHeight * 0.75) + 900;
+
+    _scrollController.animateTo(
+      targetPosition,
+      duration: const Duration(milliseconds: 1200),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
+  void _scrollToResources() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final targetPosition = (screenHeight * 0.75) + 1200;
+
+    _scrollController.animateTo(
+      targetPosition,
+      duration: const Duration(milliseconds: 1200),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,7 +183,7 @@ class _RISHomePageState extends State<RISHomePage>
               _buildHeroSection(),
               _buildStatsSection(),
               _buildFeaturesSection(),
-              _buildExamCategoriesSection(),
+              const CategoriesSection(),
               _buildStudyResourcesSection(),
               _buildMotivationalSection(),
               _buildFooter(),
@@ -161,7 +215,6 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // MOBILE-OPTIMIZED APP BAR
   Widget _buildAppBar() {
     final opacity = (_scrollOffset / 100).clamp(0.0, 1.0);
 
@@ -222,7 +275,6 @@ class _RISHomePageState extends State<RISHomePage>
         ),
       ),
       actions: [
-        // Search Button (opens search screen)
         IconButton(
           icon: const Icon(
             Icons.search_rounded,
@@ -230,12 +282,10 @@ class _RISHomePageState extends State<RISHomePage>
             size: 24,
           ),
           onPressed: () {
-            // Navigate to search screen
             showSearch(context: context, delegate: ExamSearchDelegate());
           },
           splashRadius: 24,
         ),
-        // Notification with Pulse animation
         AnimatedBuilder(
           animation: _notificationController,
           builder: (context, child) {
@@ -255,16 +305,36 @@ class _RISHomePageState extends State<RISHomePage>
                     ),
                   ],
                 ),
-                onPressed: () {
-                  // Show notifications
-                  _showNotifications();
+                onPressed: () async {
+                  final notificationService = NotificationService();
+                  bool isEnabled = await notificationService
+                      .areNotificationsEnabled();
+
+                  if (!isEnabled) {
+                    bool granted = await notificationService
+                        .requestPermission();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            granted
+                                ? '✅ Notifications enabled!'
+                                : '❌ Notifications denied',
+                            style: const TextStyle(fontFamily: 'Ubuntu'),
+                          ),
+                          backgroundColor: granted ? Colors.green : Colors.red,
+                        ),
+                      );
+                    }
+                  } else {
+                    _showNotificationSettings();
+                  }
                 },
                 splashRadius: 24,
               ),
             );
           },
         ),
-        // Profile with animation
         Padding(
           padding: const EdgeInsets.only(right: 12, left: 4),
           child: ScaleTransition(
@@ -276,7 +346,6 @@ class _RISHomePageState extends State<RISHomePage>
             ),
             child: GestureDetector(
               onTap: () {
-                // Navigate to profile
                 _navigateToProfile();
               },
               child: Container(
@@ -306,15 +375,13 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // MOBILE-OPTIMIZED HERO SECTION
   Widget _buildHeroSection() {
-    final parallax = _scrollOffset * 0.3; // Reduced for mobile
+    final parallax = _scrollOffset * 0.3;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75, // Responsive height
+      height: MediaQuery.of(context).size.height * 0.75,
       child: Stack(
         children: [
-          // Background with Parallax
           Transform.translate(
             offset: Offset(0, parallax),
             child: Container(
@@ -341,8 +408,6 @@ class _RISHomePageState extends State<RISHomePage>
               ),
             ),
           ),
-
-          // Content
           SafeArea(
             child: Center(
               child: Padding(
@@ -456,8 +521,6 @@ class _RISHomePageState extends State<RISHomePage>
               ),
             ),
           ),
-
-          // Scroll Indicator
           Positioned(
             bottom: 20,
             left: 0,
@@ -496,7 +559,6 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // MOBILE CTA BUTTON
   Widget _buildMobileCTAButton(String text, IconData icon, bool isPrimary) {
     return SizedBox(
       width: double.infinity,
@@ -514,7 +576,13 @@ class _RISHomePageState extends State<RISHomePage>
               : [],
         ),
         child: ElevatedButton.icon(
-          onPressed: () {},
+          onPressed: () {
+            if (text == "Start Learning") {
+              _scrollToCategories();
+            } else if (text == "Explore Resources") {
+              _scrollToResources();
+            }
+          },
           icon: Icon(icon, size: 20),
           label: Text(
             text,
@@ -544,7 +612,6 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // STATS SECTION
   Widget _buildStatsSection() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
@@ -655,7 +722,6 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // FEATURES SECTION (Mobile GridView)
   Widget _buildFeaturesSection() {
     final features = [
       {
@@ -671,18 +737,15 @@ class _RISHomePageState extends State<RISHomePage>
         'color': Colors.blue,
       },
       {
-        'title': 'Study Vault',
+        'title': 'Study Links',
         'desc': 'Organized materials',
         'icon': Icons.folder_special_rounded,
         'color': Colors.orange,
       },
     ];
 
-    // Get screen width
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth =
-        (screenWidth - 56) /
-        2; // 56 = 20 (left padding) + 20 (right padding) + 16 (spacing)
+    final cardWidth = (screenWidth - 56) / 2;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
@@ -695,397 +758,89 @@ class _RISHomePageState extends State<RISHomePage>
       ),
       child: Column(
         children: [
-          const Text(
-            "Powerful Features",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              fontFamily: 'Ubuntu',
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            "Everything you need to excel",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.white70,
-              fontFamily: 'Ubuntu',
-            ),
-          ),
-          const SizedBox(height: 40),
-
-          // Using Wrap with center alignment to center the third card
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            alignment: WrapAlignment.center, // This centers the items
-            children: features.map((feature) {
-              return SizedBox(
-                width: cardWidth,
-                child: _buildMobileFeatureCard(
-                  feature['title'] as String,
-                  feature['desc'] as String,
-                  feature['icon'] as IconData,
-                  feature['color'] as Color,
+          TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
+            builder: (context, double value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 30 * (1 - value)),
+                  child: child,
                 ),
               );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileFeatureCard(
-    String title,
-    String desc,
-    IconData icon,
-    Color color,
-  ) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to feature details
-      },
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 32),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-                fontFamily: 'Ubuntu',
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              desc,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontFamily: 'Ubuntu',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // EXAM CATEGORIES (Mobile ScrollView)
-  Widget _buildExamCategoriesSection() {
-    final categories = [
-      {
-        'title': 'TNPSC',
-        'subtitle': 'State Services',
-        'color': const Color(0xFFBDB76B),
-        'icon': Icons.public_rounded,
-      },
-      {
-        'title': 'UPSC',
-        'subtitle': 'Civil Services',
-        'color': const Color(0xFF1976D2),
-        'icon': Icons.account_balance_rounded,
-      },
-      {
-        'title': 'SSC',
-        'subtitle': 'Staff Selection',
-        'color': const Color(0xFF7B1FA2),
-        'icon': Icons.work_rounded,
-      },
-      {
-        'title': 'Banking',
-        'subtitle': 'IBPS & SBI',
-        'color': const Color(0xFFE65100),
-        'icon': Icons.account_balance_wallet_rounded,
-      },
-      {
-        'title': 'Railways',
-        'subtitle': 'RRB Exams',
-        'color': const Color(0xFF00695C),
-        'icon': Icons.train_rounded,
-      },
-      {
-        'title': 'Defence',
-        'subtitle': 'CDS & NDA',
-        'color': const Color(0xFFD32F2F),
-        'icon': Icons.shield_rounded,
-      },
-    ];
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 60),
-      color: Colors.white,
-      child: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              "Choose Your Category",
+            },
+            child: const Text(
+              "Powerful Features",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1976D2),
+                color: Colors.white,
                 fontFamily: 'Ubuntu',
               ),
             ),
           ),
-          const SizedBox(height: 32),
-          SizedBox(
-            height: 140,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final cat = categories[index];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: _buildMobileExamCategory(
-                    cat['title'] as String,
-                    cat['subtitle'] as String,
-                    cat['icon'] as IconData,
-                    cat['color'] as Color,
-                  ),
-                );
-              },
+          const SizedBox(height: 12),
+          TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 1000),
+            curve: Curves.easeOutCubic,
+            builder: (context, double value, child) {
+              return Opacity(opacity: value, child: child);
+            },
+            child: const Text(
+              "Everything you need to succeed in one place",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.white70,
+                fontFamily: 'Ubuntu',
+              ),
             ),
+          ),
+          const SizedBox(height: 40),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            alignment: WrapAlignment.center,
+            children: [
+              _AnimatedFeatureCard(
+                delay: 0,
+                width: cardWidth,
+                title: features[0]['title'] as String,
+                desc: features[0]['desc'] as String,
+                icon: features[0]['icon'] as IconData,
+                color: features[0]['color'] as Color,
+              ),
+              _AnimatedFeatureCard(
+                delay: 200,
+                width: cardWidth,
+                title: features[1]['title'] as String,
+                desc: features[1]['desc'] as String,
+                icon: features[1]['icon'] as IconData,
+                color: features[1]['color'] as Color,
+              ),
+              _AnimatedFeatureCard(
+                delay: 400,
+                width: cardWidth,
+                title: features[2]['title'] as String,
+                desc: features[2]['desc'] as String,
+                icon: features[2]['icon'] as IconData,
+                color: features[2]['color'] as Color,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMobileExamCategory(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-  ) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to category
-      },
-      child: Container(
-        width: 160,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [color, color.withOpacity(0.8)],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(icon, color: Colors.white, size: 32),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    fontFamily: 'Ubuntu',
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white70,
-                    fontFamily: 'Ubuntu',
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // STUDY RESOURCES
   Widget _buildStudyResourcesSection() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.grey[50]!, Colors.white]),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            "Latest Study Resources",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Ubuntu',
-              color: Color(0xFF1976D2),
-            ),
-          ),
-          const SizedBox(height: 32),
-          _buildMobileResourceCard(
-            "Current Affairs->",
-            "Updated daily with latest events",
-            "✅",
-            Icons.article_rounded,
-            Colors.blue,
-          ),
-          const SizedBox(height: 16),
-          _buildMobileResourceCard(
-            "Quantitative Aptitude->",
-            "Complete guide with shortcuts",
-            "✅",
-            Icons.calculate_rounded,
-            Colors.purple,
-          ),
-          const SizedBox(height: 16),
-          _buildMobileResourceCard(
-            "General Knowledge->",
-            "Comprehensive GK database",
-            "✅",
-            Icons.public_rounded,
-            Colors.orange,
-          ),
-        ],
-      ),
-    );
+    return const StudyResourcesSection();
   }
 
-  Widget _buildMobileResourceCard(
-    String title,
-    String desc,
-    String stat,
-    IconData icon,
-    Color color,
-  ) {
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                      fontFamily: 'Ubuntu',
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    desc,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                      fontFamily: 'Ubuntu',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      stat,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: color,
-                        fontFamily: 'Ubuntu',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: Colors.grey[400],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // MOTIVATIONAL SECTION
   Widget _buildMotivationalSection() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
@@ -1149,7 +904,6 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // FOOTER
   Widget _buildFooter() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
@@ -1238,7 +992,6 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // DRAWER (Mobile Navigation)
   Widget _buildDrawer() {
     return Drawer(
       child: Container(
@@ -1355,8 +1108,7 @@ class _RISHomePageState extends State<RISHomePage>
     );
   }
 
-  // Helper Methods
-  void _showNotifications() {
+  void _showNotificationSettings() {
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -1365,7 +1117,7 @@ class _RISHomePageState extends State<RISHomePage>
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Notifications',
+              '🔔 Notifications',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -1374,8 +1126,34 @@ class _RISHomePageState extends State<RISHomePage>
             ),
             const SizedBox(height: 20),
             const Text(
-              'No new notifications',
-              style: TextStyle(fontFamily: 'Ubuntu'),
+              '✅ Notifications are enabled!',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.green,
+                fontFamily: 'Ubuntu',
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () async {
+                await NotificationService().disableNotifications();
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Notifications disabled',
+                        style: TextStyle(fontFamily: 'Ubuntu'),
+                      ),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text(
+                'Disable Notifications',
+                style: TextStyle(fontFamily: 'Ubuntu'),
+              ),
             ),
           ],
         ),
@@ -1384,19 +1162,13 @@ class _RISHomePageState extends State<RISHomePage>
   }
 
   void _navigateToProfile() {
-    // Navigate to profile screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Profile feature coming soon!',
-          style: TextStyle(fontFamily: 'Ubuntu'),
-        ),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ProfileScreen()),
     );
   }
 }
 
-// Search Delegate for Mobile
 class ExamSearchDelegate extends SearchDelegate<String> {
   @override
   ThemeData appBarTheme(BuildContext context) {
@@ -1463,5 +1235,594 @@ class ExamSearchDelegate extends SearchDelegate<String> {
         );
       },
     );
+  }
+}
+
+// Study Resources Section
+class StudyResourcesSection extends StatefulWidget {
+  const StudyResourcesSection({super.key});
+
+  @override
+  State<StudyResourcesSection> createState() => _StudyResourcesSectionState();
+}
+
+class _StudyResourcesSectionState extends State<StudyResourcesSection>
+    with TickerProviderStateMixin {
+  bool _isVisible = false;
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.8, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onVisibilityChanged(VisibilityInfo info) {
+    if (info.visibleFraction > 0.3 && !_isVisible) {
+      setState(() {
+        _isVisible = true;
+      });
+      _controller.forward();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return VisibilityDetector(
+      key: const Key('study-resources-section'),
+      onVisibilityChanged: _onVisibilityChanged,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [Colors.grey[50]!, Colors.white]),
+        ),
+        child: Column(
+          children: [
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: const Text(
+                  "Latest Study Resources",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Ubuntu',
+                    color: Color(0xFF1976D2),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            _buildAnimatedResourceCard(
+              "Current Affairs→",
+              "Updated daily with latest events",
+              "✅",
+              Icons.article_rounded,
+              Colors.blue,
+              delay: 0,
+            ),
+            const SizedBox(height: 16),
+            _buildAnimatedResourceCard(
+              "Quantitative Aptitude→",
+              "Complete guide with shortcuts",
+              "✅",
+              Icons.calculate_rounded,
+              Colors.purple,
+              delay: 150,
+            ),
+            const SizedBox(height: 16),
+            _buildAnimatedResourceCard(
+              "General Knowledge→",
+              "Comprehensive GK database",
+              "✅",
+              Icons.public_rounded,
+              Colors.orange,
+              delay: 300,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedResourceCard(
+    String title,
+    String desc,
+    String stat,
+    IconData icon,
+    Color color, {
+    required int delay,
+  }) {
+    return AnimatedResourceCard(
+      title: title,
+      desc: desc,
+      stat: stat,
+      icon: icon,
+      color: color,
+      controller: _controller,
+      delay: delay,
+    );
+  }
+}
+
+class AnimatedResourceCard extends StatefulWidget {
+  final String title;
+  final String desc;
+  final String stat;
+  final IconData icon;
+  final Color color;
+  final AnimationController controller;
+  final int delay;
+
+  const AnimatedResourceCard({
+    super.key,
+    required this.title,
+    required this.desc,
+    required this.stat,
+    required this.icon,
+    required this.color,
+    required this.controller,
+    required this.delay,
+  });
+
+  @override
+  State<AnimatedResourceCard> createState() => _AnimatedResourceCardState();
+}
+
+class _AnimatedResourceCardState extends State<AnimatedResourceCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _cardController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _cardController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _cardController, curve: Curves.easeOut));
+
+    _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(parent: _cardController, curve: Curves.easeOutBack),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(-0.5, 0), end: Offset.zero).animate(
+          CurvedAnimation(parent: _cardController, curve: Curves.easeOutCubic),
+        );
+
+    widget.controller.addListener(_onParentControllerChange);
+  }
+
+  void _onParentControllerChange() {
+    if (widget.controller.value > 0.1 &&
+        _cardController.status == AnimationStatus.dismissed) {
+      Future.delayed(Duration(milliseconds: widget.delay), () {
+        if (mounted) {
+          _cardController.forward();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onParentControllerChange);
+    _cardController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: _buildMobileResourceCard(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileResourceCard() {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        ProfileService().trackResourceAccessed();
+
+        Widget screen;
+        if (widget.title.contains('Current Affairs')) {
+          screen = const CurrentAffairsScreen();
+        } else if (widget.title.contains('Quantitative Aptitude')) {
+          screen = const QuantitativeAptitudeScreen();
+        } else if (widget.title.contains('General Knowledge')) {
+          screen = const GeneralKnowledgeScreen();
+        } else {
+          return;
+        }
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => screen),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: widget.color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(widget.icon, color: widget.color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                      fontFamily: 'Ubuntu',
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.desc,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      fontFamily: 'Ubuntu',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: widget.color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      widget.stat,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: widget.color,
+                        fontFamily: 'Ubuntu',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedFeatureCard extends StatefulWidget {
+  final int delay;
+  final double width;
+  final String title;
+  final String desc;
+  final IconData icon;
+  final Color color;
+
+  const _AnimatedFeatureCard({
+    required this.delay,
+    required this.width,
+    required this.title,
+    required this.desc,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  State<_AnimatedFeatureCard> createState() => _AnimatedFeatureCardState();
+}
+
+class _AnimatedFeatureCardState extends State<_AnimatedFeatureCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+
+    _slideAnimation = Tween<double>(
+      begin: 50.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _fadeAnimation.value,
+          child: Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Transform.translate(
+              offset: Offset(0, _slideAnimation.value),
+              child: SizedBox(
+                width: widget.width,
+                child: _FeatureCardContent(
+                  title: widget.title,
+                  desc: widget.desc,
+                  icon: widget.icon,
+                  color: widget.color,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FeatureCardContent extends StatefulWidget {
+  final String title;
+  final String desc;
+  final IconData icon;
+  final Color color;
+
+  const _FeatureCardContent({
+    required this.title,
+    required this.desc,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  State<_FeatureCardContent> createState() => _FeatureCardContentState();
+}
+
+class _FeatureCardContentState extends State<_FeatureCardContent>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  // 👇 ADDED: Navigation method
+  void _navigateToFeature(BuildContext context) {
+    Widget? screen;
+
+    if (widget.title == 'Digital Flashcards') {
+      screen = const DigitalFlashcardsScreen();
+    } else if (widget.title == 'PYQ\'s') {
+      screen = const PYQsScreen();
+    } else if (widget.title == 'Study Links') {
+      screen = const StudyVaultScreen();
+    }
+
+    if (screen != null) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => screen!));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) {
+        setState(() => _isPressed = true);
+        HapticFeedback.lightImpact();
+      },
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        _navigateToFeature(context); // 👈 ADDED: Call navigation
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(_isPressed ? 0.05 : 0.1),
+                blurRadius: _isPressed ? 10 : 15,
+                offset: Offset(0, _isPressed ? 4 : 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _pulseAnimation.value,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: widget.color.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(widget.icon, color: widget.color, size: 32),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              Text(
+                widget.title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                  fontFamily: 'Ubuntu',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.desc,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontFamily: 'Ubuntu',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AppWithLoading extends StatefulWidget {
+  const AppWithLoading({super.key});
+
+  @override
+  State<AppWithLoading> createState() => _AppWithLoadingState();
+}
+
+class _AppWithLoadingState extends State<AppWithLoading> {
+  bool _isLoading = true;
+
+  void _onLoadingComplete() {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return LoadingScreen(onLoadingComplete: _onLoadingComplete);
+    }
+    return const RISHomePage();
   }
 }
