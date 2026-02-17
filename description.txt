@@ -23,3 +23,5 @@ However, most online resources are fragmented in nature. Aspirants are required 
 Several mobile applications are available for competitive exam preparation, offering features such as quizzes, mock tests, video lectures, and notifications. While these apps provide flexibility and convenience, most of them are exam-specific or subscription-based. Aspirants preparing for multiple exams must install several apps, each with different interfaces and payment models. Furthermore, many applications emphasize content delivery but lack personalized guidance, career counseling, and detailed information about government posts.
 Conclusion of Review of Existing Methods
 The review of existing methods reveals that while traditional coaching institutes, printed materials, online resources, and mobile applications have contributed significantly to competitive exam preparation, they fail to provide a complete and integrated solution. High costs, limited accessibility, outdated information, fragmented resources, and lack of post-exam
+
+this app's frontend is almost done and has successfully connected with it's backend it's a matter of month to complete the project and publish.
