@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 
-/// Current Affairs Screen - Real, Accurate, Daily Updated Content
 class CurrentAffairsScreen extends StatefulWidget {
   const CurrentAffairsScreen({super.key});
 
@@ -10,510 +11,467 @@ class CurrentAffairsScreen extends StatefulWidget {
 }
 
 class _CurrentAffairsScreenState extends State<CurrentAffairsScreen> {
-  String _selectedMonth = 'February 2026';
-  final List<String> _months = [
-    'February 2026',
-    'January 2026',
-    'December 2025',
-    'November 2025',
-  ];
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  DateTime _selectedDate = DateTime.now();
+  String _selectedCategory = 'All';
+
+  String get _dateString {
+    return DateFormat('yyyy-MM-dd').format(_selectedDate);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor:
+          isDark ? const Color(0xFF0F0F1A) : const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text(
-          'Current Affairs',
-          style: TextStyle(fontFamily: 'Ubuntu'),
-        ),
+        elevation: 0,
         backgroundColor: const Color(0xFF2196F3),
         foregroundColor: Colors.white,
+        title: const Text('Current Affairs',
+            style:
+                TextStyle(fontFamily: 'Ubuntu', fontWeight: FontWeight.w700)),
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.calendar_month),
-            onSelected: (value) => setState(() => _selectedMonth = value),
-            itemBuilder: (context) => _months
-                .map(
-                  (month) => PopupMenuItem(
-                    value: month,
-                    child: Text(
-                      month,
-                      style: const TextStyle(fontFamily: 'Ubuntu'),
-                    ),
-                  ),
-                )
-                .toList(),
+          IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: _selectDate,
+            tooltip: 'Select Date',
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.white],
-          ),
-        ),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _buildMonthHeader(),
-            const SizedBox(height: 16),
-            ..._getCurrentAffairsList(_selectedMonth),
-          ],
-        ),
+      body: Column(
+        children: [
+          _buildDateHeader(),
+          _buildCategoryTabs(isDark),
+          Expanded(child: _buildArticlesList(isDark)),
+        ],
       ),
     );
   }
 
-  Widget _buildMonthHeader() {
+  Widget _buildDateHeader() {
+    final isToday = _isSameDay(_selectedDate, DateTime.now());
+    final isYesterday = _isSameDay(
+      _selectedDate,
+      DateTime.now().subtract(const Duration(days: 1)),
+    );
+
+    String displayDate;
+    if (isToday) {
+      displayDate = 'Today';
+    } else if (isYesterday) {
+      displayDate = 'Yesterday';
+    } else {
+      displayDate = DateFormat('MMMM dd, yyyy').format(_selectedDate);
+    }
+
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
-        ),
-        borderRadius: BorderRadius.circular(16),
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Color(0xFF2196F3),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          )
         ],
       ),
       child: Row(
         children: [
-          const Icon(Icons.newspaper, color: Colors.white, size: 32),
-          const SizedBox(width: 16),
+          IconButton(
+            icon: const Icon(Icons.chevron_left, color: Colors.white),
+            onPressed: () {
+              setState(() {
+                _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+              });
+            },
+          ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _selectedMonth,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Ubuntu',
-                  ),
+            child: Center(
+              child: Text(
+                displayDate,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Ubuntu',
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Updated daily with verified facts',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    fontFamily: 'Ubuntu',
-                  ),
-                ),
-              ],
+              ),
             ),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.chevron_right,
+              color: isToday ? Colors.white30 : Colors.white,
+            ),
+            onPressed: isToday
+                ? null
+                : () {
+                    setState(() {
+                      _selectedDate =
+                          _selectedDate.add(const Duration(days: 1));
+                    });
+                  },
           ),
         ],
       ),
     );
   }
 
-  List<Widget> _getCurrentAffairsList(String month) {
-    if (month == 'February 2026') {
-      return _getFebruary2026Affairs();
-    } else if (month == 'January 2026') {
-      return _getJanuary2026Affairs();
-    } else {
-      return [_buildComingSoonCard()];
-    }
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  List<Widget> _getFebruary2026Affairs() {
-    return [
-      _buildAffairCard(
-        date: 'Feb 16, 2026',
-        category: 'National',
-        title: 'Republic Day 2026 Celebrations',
-        content:
-            '''India celebrated its 77th Republic Day on January 26, 2026, with grand celebrations at Rajpath, New Delhi. The theme focused on "India@100: Viksit Bharat" highlighting India's development journey.
+  // ✅ FIXED: Dark theme support for category tabs
+  Widget _buildCategoryTabs(bool isDark) {
+    final categories = ['All', 'National', 'Government', 'General'];
 
-Key Highlights:
-• Chief Guest: President of France
-• Grand military parade showcasing India's defense capabilities
-• Cultural tableaux from all 28 states and 8 union territories
-• Display of indigenous defense equipment including Tejas fighter jets
-• Awards to gallantry awardees and civilians
+    return Container(
+      height: 50,
+      color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          final isSelected = _selectedCategory == category;
 
-Significance: Republic Day marks the date when the Constitution of India came into effect on January 26, 1950, replacing the Government of India Act 1935.''',
-        importance: 'HIGH',
-        icon: Icons.flag,
-        color: Colors.orange,
-      ),
-      _buildAffairCard(
-        date: 'Feb 15, 2026',
-        category: 'International',
-        title: 'India-USA Trade Agreement Progress',
-        content:
-            '''India and the United States are making significant progress on a comprehensive trade agreement aimed at boosting bilateral trade to \$500 billion by 2030.
-
-Key Points:
-• Focus on reducing tariffs on IT services and pharmaceuticals
-• Enhanced cooperation in clean energy sector
-• Streamlined visa processes for professionals
-• Technology transfer in defense and aerospace
-
-Economic Impact: Current bilateral trade stands at approximately \$190 billion. The new agreement aims to more than double this figure.
-
-India's Advantage: Agreement will boost Indian exports in:
-- Information Technology
-- Pharmaceuticals
-- Textiles
-- Agricultural products''',
-        importance: 'HIGH',
-        icon: Icons.handshake,
-        color: Colors.blue,
-      ),
-      _buildAffairCard(
-        date: 'Feb 14, 2026',
-        category: 'Science & Technology',
-        title: 'ISRO Launches Gaganyaan-3 Mission',
-        content:
-            '''The Indian Space Research Organisation (ISRO) successfully launched Gaganyaan-3, India's third unmanned test flight ahead of the planned human spaceflight mission.
-
-Mission Details:
-• Launch Vehicle: GSLV Mk III (LVM3)
-• Launch Site: Satish Dhawan Space Centre, Sriharikota
-• Objective: Test crew escape system and life support systems
-• Mission Duration: 16 hours in Low Earth Orbit
-
-What's Next:
-- Final unmanned test flight: June 2026
-- First crewed mission: December 2026
-- Crew: 3 Indian astronauts (Gaganauts)
-
-Historical Significance: When successful, India will become the 4th country to independently send humans to space after Russia, USA, and China.''',
-        importance: 'MEDIUM',
-        icon: Icons.rocket_launch,
-        color: Colors.purple,
-      ),
-      _buildAffairCard(
-        date: 'Feb 12, 2026',
-        category: 'Economy',
-        title: 'India GDP Growth Rate 2025-26',
-        content:
-            '''The Reserve Bank of India (RBI) revised India's GDP growth forecast for FY 2025-26 to 7.2%, making India the fastest-growing major economy.
-
-Economic Indicators:
-• Q3 FY26 Growth: 7.4%
-• Inflation Rate: 4.8% (within RBI target)
-• Repo Rate: 6.25% (unchanged)
-• Foreign Exchange Reserves: \$640 billion
-
-Key Growth Drivers:
-1. Manufacturing sector expansion (8.2% growth)
-2. Digital economy boom (fintech, e-commerce)
-3. Infrastructure investment (₹11 lakh crore allocation)
-4. Services sector resilience
-5. Agricultural productivity improvements
-
-Challenges:
-- Global economic uncertainty
-- Oil price volatility
-- Need for job creation to match GDP growth''',
-        importance: 'HIGH',
-        icon: Icons.trending_up,
-        color: Colors.green,
-      ),
-      _buildAffairCard(
-        date: 'Feb 10, 2026',
-        category: 'Sports',
-        title: 'ICC Champions Trophy 2025 Winners',
-        content:
-            '''India won the ICC Champions Trophy 2025, defeating Australia by 5 wickets in the final at Lord's, London.
-
-Match Summary:
-• Australia: 287/8 (50 overs)
-• India: 291/5 (48.3 overs)
-• Player of the Match: Rohit Sharma (128 runs)
-• Player of the Tournament: Jasprit Bumrah (18 wickets)
-
-Historic Achievement:
-- India's 3rd Champions Trophy title (2002, 2013, 2025)
-- First team to win all matches in the tournament
-- Rohit Sharma becomes most successful Indian captain in ICC events
-
-Key Performers:
-• Rohit Sharma: 487 runs at average 97.4
-• Jasprit Bumrah: 18 wickets at average 12.3
-• Ravindra Jadeja: All-round performance (12 wickets, 245 runs)''',
-        importance: 'MEDIUM',
-        icon: Icons.sports_cricket,
-        color: Colors.indigo,
-      ),
-      _buildAffairCard(
-        date: 'Feb 8, 2026',
-        category: 'Environment',
-        title: 'National Clean Air Programme Success',
-        content:
-            '''India's National Clean Air Programme (NCAP) achieved a milestone with 24% reduction in PM2.5 levels across 132 cities compared to 2019 baseline.
-
-Programme Highlights:
-• Target: 40% reduction by 2026 (on track)
-• Cities covered: 132 non-attainment cities
-• Investment: ₹4,400 crore allocated
-
-Key Initiatives:
-1. BS-VI fuel standards nationwide
-2. 100% electric public transport in Delhi NCR
-3. Industrial emission controls
-4. Dust control at construction sites
-5. Massive tree plantation drives
-
-City-wise Achievements:
-• Delhi: 28% reduction
-• Mumbai: 22% reduction
-• Bengaluru: 31% reduction
-• Kolkata: 25% reduction
-
-Health Impact: Estimated to prevent 380,000 premature deaths annually by 2030.''',
-        importance: 'HIGH',
-        icon: Icons.eco,
-        color: Colors.teal,
-      ),
-    ];
-  }
-
-  List<Widget> _getJanuary2026Affairs() {
-    return [
-      _buildAffairCard(
-        date: 'Jan 26, 2026',
-        category: 'National',
-        title: 'India-Middle East-Europe Corridor Launch',
-        content:
-            '''Prime Minister inaugurated the India-Middle East-Europe Economic Corridor (IMEC), a historic infrastructure project connecting India to Europe via Middle East.
-
-Project Details:
-• Total Length: ~9,000 km
-• Investment: \$20 billion (multiple countries)
-• Components: Railway, road, ports, digital connectivity
-• Timeline: Phased completion by 2030
-
-Route:
-India → UAE → Saudi Arabia → Jordan → Israel → Greece → Europe
-
-Benefits for India:
-- 40% reduction in shipping time to Europe
-- Enhanced trade volumes (estimated \$500 billion by 2030)
-- Strategic connectivity
-- Job creation (estimated 1 million jobs)
-
-Economic Impact: Will compete with China's Belt and Road Initiative and reduce dependence on Suez Canal route.''',
-        importance: 'HIGH',
-        icon: Icons.public,
-        color: Colors.orange,
-      ),
-      _buildAffairCard(
-        date: 'Jan 20, 2026',
-        category: 'Technology',
-        title: 'Digital India 2.0 Launch',
-        content:
-            '''Government launched Digital India 2.0 initiative focusing on AI integration, cybersecurity, and digital infrastructure expansion.
-
-Key Objectives:
-• AI integration in government services
-• 100% digital literacy by 2030
-• Quantum computing research
-• 5G coverage in all villages
-
-Investment: ₹1.5 lakh crore over 5 years
-
-Major Components:
-1. AI-powered citizen services
-2. National Quantum Mission
-3. Semiconductor manufacturing push
-4. Digital health infrastructure
-5. Smart cities expansion to 200 cities
-
-Expected Outcomes:
-- 50 million new digital jobs
-- \$1 trillion digital economy by 2028
-- World-class digital infrastructure''',
-        importance: 'HIGH',
-        icon: Icons.computer,
-        color: Colors.blue,
-      ),
-    ];
-  }
-
-  Widget _buildAffairCard({
-    required String date,
-    required String category,
-    required String title,
-    required String content,
-    required String importance,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: ChoiceChip(
+              label: Text(category),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  _selectedCategory = category;
+                });
+              },
+              selectedColor: const Color(0xFF2196F3),
+              backgroundColor:
+                  isDark ? const Color(0xFF252538) : Colors.grey[200],
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : Colors.black87),
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Ubuntu',
               ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              category.toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Ubuntu',
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: importance == 'HIGH'
-                                  ? Colors.red
-                                  : Colors.orange,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              importance,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Ubuntu',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: color,
-                          fontFamily: 'Ubuntu',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          );
+        },
+      ),
+    );
+  }
 
-          // Content
-          Padding(
+  Widget _buildArticlesList(bool isDark) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _db
+          .collection('currentAffairs')
+          .doc(_dateString)
+          .collection('articles')
+          .orderBy('publishedAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _buildErrorState(snapshot.error.toString(), isDark);
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF2196F3)),
+          );
+        }
+
+        var articles = snapshot.data?.docs ?? [];
+
+        if (_selectedCategory != 'All') {
+          articles = articles.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final category = (data['category'] ?? '').toString().toLowerCase();
+            final selected = _selectedCategory.toLowerCase();
+            return category == selected;
+          }).toList();
+        }
+
+        if (articles.isEmpty) {
+          return _buildEmptyState(isDark);
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            setState(() {});
+          },
+          child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today,
-                      size: 14,
-                      color: Colors.grey[600],
+            itemCount: articles.length,
+            itemBuilder: (context, index) {
+              final article = articles[index].data() as Map<String, dynamic>;
+              return _buildArticleCard(article, isDark);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // ✅ FIXED: Dark theme support for article cards
+  Widget _buildArticleCard(Map<String, dynamic> article, bool isDark) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      color: isDark ? const Color(0xFF1E1E30) : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _showArticleDetail(article),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getCategoryColor(article['category']),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      date,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+                    child: Text(
+                      article['category'] ?? 'General',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
                         fontFamily: 'Ubuntu',
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  content,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.6,
-                    color: Colors.black87,
-                    fontFamily: 'Ubuntu',
                   ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      article['source'] ?? '',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white60 : Colors.grey[600],
+                        fontFamily: 'Ubuntu',
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios,
+                      size: 14, color: isDark ? Colors.white30 : Colors.grey),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                article['title'] ?? '',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Ubuntu',
+                  height: 1.3,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
-              ],
-            ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              if (article['summary'] != null &&
+                  article['summary'].toString().isNotEmpty)
+                Text(
+                  article['summary'],
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.white60 : Colors.grey[700],
+                    fontFamily: 'Ubuntu',
+                    height: 1.4,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.access_time,
+                      size: 14,
+                      color: isDark ? Colors.white38 : Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatTime(article['publishedAt']),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white38 : Colors.grey[600],
+                      fontFamily: 'Ubuntu',
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildComingSoonCard() {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(
+  // ✅ FIXED: Dark theme support for article detail modal
+  void _showArticleDetail(Map<String, dynamic> article) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (_, controller) => Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E30) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
           child: Column(
             children: [
-              Icon(Icons.schedule, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'Coming Soon',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[600],
-                  fontFamily: 'Ubuntu',
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Content for this month will be added soon',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[500],
-                  fontFamily: 'Ubuntu',
+              Expanded(
+                child: ListView(
+                  controller: controller,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _getCategoryColor(article['category']),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          article['category'] ?? 'General',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Ubuntu',
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      article['title'] ?? '',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Ubuntu',
+                        height: 1.3,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text(
+                          article['source'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2196F3),
+                            fontFamily: 'Ubuntu',
+                          ),
+                        ),
+                        Text(' • ',
+                            style: TextStyle(
+                                color: isDark
+                                    ? Colors.white24
+                                    : Colors.grey[400])),
+                        Text(
+                          _formatTime(article['publishedAt']),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.white60 : Colors.grey[600],
+                            fontFamily: 'Ubuntu',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    if (article['summary'] != null &&
+                        article['summary'].toString().isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF252538)
+                              : Colors.blue[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          article['summary'],
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontFamily: 'Ubuntu',
+                            height: 1.5,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 20),
+                    if (article['content'] != null &&
+                        article['content'].toString().isNotEmpty)
+                      Text(
+                        _cleanContent(article['content']),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontFamily: 'Ubuntu',
+                          height: 1.6,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+                    if (article['url'] != null &&
+                        article['url'].toString().isNotEmpty)
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final success = await _launchURL(article['url']);
+                          if (!success && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Could not open article',
+                                    style: TextStyle(fontFamily: 'Ubuntu')),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text('Read Full Article',
+                            style: TextStyle(fontFamily: 'Ubuntu')),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2196F3),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -521,5 +479,157 @@ Expected Outcomes:
         ),
       ),
     );
+  }
+
+  Widget _buildEmptyState(bool isDark) {
+    final isToday = _isSameDay(_selectedDate, DateTime.now());
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.article_outlined,
+              size: 80, color: isDark ? Colors.white24 : Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(
+            _selectedCategory == 'All'
+                ? (isToday
+                    ? 'No articles yet today'
+                    : 'No articles for ${DateFormat('MMM dd, yyyy').format(_selectedDate)}')
+                : 'No $_selectedCategory articles',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              color: isDark ? Colors.white60 : Colors.grey[600],
+              fontFamily: 'Ubuntu',
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (_selectedCategory != 'All')
+            ElevatedButton(
+              onPressed: () => setState(() => _selectedCategory = 'All'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2196F3),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Show All',
+                  style: TextStyle(fontFamily: 'Ubuntu')),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error, bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Error loading articles',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontFamily: 'Ubuntu')),
+            const SizedBox(height: 8),
+            Text(error,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.white60 : Colors.grey[600])),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => setState(() {}),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2196F3),
+                foregroundColor: Colors.white,
+              ),
+              child:
+                  const Text('Retry', style: TextStyle(fontFamily: 'Ubuntu')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getCategoryColor(String? category) {
+    switch (category?.toLowerCase()) {
+      case 'national':
+        return Colors.blue;
+      case 'government':
+        return Colors.green;
+      case 'general':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatTime(dynamic timestamp) {
+    if (timestamp == null) return '';
+    try {
+      final date = (timestamp as Timestamp).toDate();
+      final now = DateTime.now();
+      final diff = now.difference(date);
+      if (diff.inMinutes < 60) {
+        return '${diff.inMinutes}m ago';
+      } else if (diff.inHours < 24) {
+        return '${diff.inHours}h ago';
+      } else if (diff.inDays == 1) {
+        return 'Yesterday';
+      } else {
+        return DateFormat('MMM dd, yyyy').format(date);
+      }
+    } catch (e) {
+      return '';
+    }
+  }
+
+  String _cleanContent(String content) {
+    return content
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .trim();
+  }
+
+  Future<bool> _launchURL(String? url) async {
+    if (url == null || url.isEmpty) return false;
+    try {
+      String cleanUrl = url.trim();
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = 'https://$cleanUrl';
+      }
+      final uri = Uri.parse(cleanUrl);
+      if (await canLaunchUrl(uri)) {
+        return await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Error launching URL: $e');
+      return false;
+    }
+  }
+
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
   }
 }

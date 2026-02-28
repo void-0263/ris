@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'dart:async';
+import 'firebase_service.dart';
+import 'profile_service.dart';
+import 'login_screen.dart'; // for post-logout navigation
 
-/// Profile Screen with Timeout Handling
+// ─────────────────────────────────────────────
+// Profile Screen
+// ─────────────────────────────────────────────
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -14,71 +18,35 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseService _firebase = FirebaseService();
+  final ProfileService _profileService = ProfileService();
   User? _currentUser;
-
-  Map<String, dynamic> _profileData = {
-    'name': '',
-    'email': '',
-    'memberSince': '',
-    'education': 'Not set',
-    'examPrep': 'Not set',
-    'targetYear': 'Not set',
-    'studyGoal': 'Not set',
-    'totalStudyTime': 0,
-    'resourcesAccessed': 0,
-    'questionsAttempted': 0,
-    'currentStreak': 0,
-    'lastActiveDate': '',
-  };
+  Map<String, dynamic>? _profileData;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _checkAuthAndLoadProfile();
-  }
-
-  Future<void> _checkAuthAndLoadProfile() async {
     _currentUser = _auth.currentUser;
-    if (_currentUser != null) {
-      _loadUserProfile();
-    }
+    if (_currentUser != null) _loadProfile();
   }
 
-  Future<void> _loadUserProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = _currentUser!.uid;
-    final savedProfile = prefs.getString('profile_$userId');
-
-    if (savedProfile != null) {
-      if (mounted) {
-        setState(() {
-          _profileData = Map<String, dynamic>.from(json.decode(savedProfile));
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _profileData['name'] = _currentUser!.displayName ?? 'User';
-          _profileData['email'] = _currentUser!.email ?? '';
-          _profileData['memberSince'] = _formatDate(
-            _currentUser!.metadata.creationTime,
-          );
-          _profileData['lastActiveDate'] = DateTime.now().toIso8601String();
-        });
-      }
-      await _saveUserProfile();
-    }
+  Future<void> _loadProfile() async {
+    setState(() => _loading = true);
+    // forceRefresh: true — always get latest from Firestore, skip cache
+    final data = await _profileService.getUserProfile(forceRefresh: true);
+    if (mounted)
+      setState(() {
+        _profileData = data;
+        _loading = false;
+      });
   }
 
-  Future<void> _saveUserProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = _currentUser!.uid;
-    await prefs.setString('profile_$userId', json.encode(_profileData));
-  }
-
-  String _formatDate(DateTime? date) {
-    if (date == null) return 'Unknown';
-    final months = [
+  String _getMemberSince() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.metadata.creationTime == null) return 'Unknown';
+    final date = user!.metadata.creationTime!;
+    const months = [
       'Jan',
       'Feb',
       'Mar',
@@ -90,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'Sep',
       'Oct',
       'Nov',
-      'Dec',
+      'Dec'
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
@@ -98,45 +66,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout', style: TextStyle(fontFamily: 'Ubuntu')),
-        content: const Text(
-          'Are you sure?',
-          style: TextStyle(fontFamily: 'Ubuntu'),
-        ),
+      builder: (_) => AlertDialog(
+        title: Text('Logout', style: TextStyle(fontFamily: 'Ubuntu')),
+        content: Text('Are you sure?', style: TextStyle(fontFamily: 'Ubuntu')),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Ubuntu')),
-          ),
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: TextStyle(fontFamily: 'Ubuntu'))),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.red, fontFamily: 'Ubuntu'),
-            ),
-          ),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('Logout',
+                  style: TextStyle(color: Colors.red, fontFamily: 'Ubuntu'))),
         ],
       ),
     );
-
     if (confirm == true) {
+      _profileService.clearCache();
       await _auth.signOut();
       if (mounted) {
-        Navigator.pop(context);
+        // ✅ Wipe entire navigation stack and go to LoginScreen
+        // User cannot press back to get back into the app
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (_) => false,
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_currentUser == null) {
-      return const LoginSignupScreen();
-    }
+    // AuthGate handles the unauthenticated case — nothing to do here
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -147,50 +111,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                        size: 28,
-                      ),
+                      icon:
+                          Icon(Icons.arrow_back, color: Colors.white, size: 28),
                       onPressed: () => Navigator.pop(context),
                     ),
-                    const Spacer(),
+                    Spacer(),
                     TextButton.icon(
                       onPressed: _logout,
-                      icon: const Icon(
-                        Icons.logout,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      label: const Text(
-                        'Logout',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Ubuntu',
-                        ),
-                      ),
+                      icon: Icon(Icons.logout, color: Colors.white, size: 20),
+                      label: Text('Logout',
+                          style: TextStyle(
+                              color: Colors.white, fontFamily: 'Ubuntu')),
                     ),
                   ],
                 ),
               ),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      _buildProfileHeader(),
-                      const SizedBox(height: 24),
-                      _buildAcademicProfile(),
-                      const SizedBox(height: 24),
-                      _buildUsageStatistics(),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                ),
+                child: _loading
+                    ? Center(
+                        child: CircularProgressIndicator(color: Colors.white))
+                    : RefreshIndicator(
+                        onRefresh: _loadProfile,
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              _buildProfileHeader(),
+                              SizedBox(height: 24),
+                              _buildAcademicProfile(),
+                              SizedBox(height: 24),
+                              _buildUsageStatistics(),
+                              SizedBox(height: 24),
+                              _buildSecuritySection(),
+                              SizedBox(height: 32),
+                            ],
+                          ),
+                        ),
+                      ),
               ),
             ],
           ),
@@ -200,78 +162,86 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader() {
+    // ✅ FIXED: Firestore is the ONLY source of truth for the name.
+    // Priority: Firestore name → Auth displayName → email prefix → 'User'
+    final firestoreName = (_profileData?['name'] as String?)?.trim() ?? '';
+    final authName = _currentUser?.displayName?.trim() ?? '';
+    final email = _currentUser?.email?.trim() ?? '';
+
+    final name = firestoreName.isNotEmpty
+        ? firestoreName
+        : authName.isNotEmpty
+            ? authName
+            : email.isNotEmpty
+                ? email.split('@')[0]
+                : 'User';
+
+    final maskedEmail = _profileService.maskEmail(email);
+    final memberSince = _getMemberSince();
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: Offset(0, 10))
         ],
       ),
       child: Column(
         children: [
           CircleAvatar(
             radius: 50,
-            backgroundColor: const Color(0xFF2196F3).withOpacity(0.1),
+            backgroundColor: Color(0xFF2196F3).withValues(alpha: 0.1),
             child: Text(
-              _profileData['name'].isNotEmpty
-                  ? _profileData['name'][0].toUpperCase()
-                  : 'U',
-              style: const TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2196F3),
-                fontFamily: 'Ubuntu',
-              ),
+              name[0].toUpperCase(), // ✅ 'T' for Thiyagarajan, never 'U'
+              style: TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2196F3),
+                  fontFamily: 'Ubuntu'),
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            _profileData['name'],
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Ubuntu',
-            ),
+          SizedBox(height: 16),
+          Text(name, // ✅ Full name shown — e.g. "Thiyagarajan"
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Ubuntu')),
+          SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_outline, size: 14, color: Colors.grey),
+              SizedBox(width: 4),
+              Text(maskedEmail,
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).textTheme.bodySmall?.color ??
+                          Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontFamily: 'Ubuntu')),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            _profileData['email'],
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-              fontFamily: 'Ubuntu',
-            ),
-          ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF2196F3).withOpacity(0.1),
+              color: Color(0xFF2196F3).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: Color(0xFF2196F3),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Member since ${_profileData['memberSince']}',
-                  style: const TextStyle(
-                    color: Color(0xFF2196F3),
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Ubuntu',
-                  ),
-                ),
+                Icon(Icons.calendar_today, size: 16, color: Color(0xFF2196F3)),
+                SizedBox(width: 8),
+                Text('Member since $memberSince',
+                    style: TextStyle(
+                        color: Color(0xFF2196F3),
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Ubuntu')),
               ],
             ),
           ),
@@ -282,16 +252,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildAcademicProfile() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: Offset(0, 10))
         ],
       ),
       child: Column(
@@ -299,116 +268,220 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.school, color: Color(0xFF2196F3), size: 24),
-              const SizedBox(width: 12),
-              const Text(
-                'Academic Profile',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Ubuntu',
-                ),
-              ),
-              const Spacer(),
+              Icon(Icons.school, color: Color(0xFF2196F3), size: 24),
+              SizedBox(width: 12),
+              Text('Academic Profile',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Ubuntu',
+                      color: Theme.of(context).textTheme.bodyLarge?.color ??
+                          Theme.of(context).colorScheme.onSurface)),
+              Spacer(),
               IconButton(
-                icon: const Icon(Icons.edit, color: Color(0xFF2196F3)),
-                onPressed: () => _editAcademicProfile(),
+                icon: Icon(Icons.edit, color: Color(0xFF2196F3)),
+                onPressed: _editAcademicProfile,
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          _buildInfoRow(Icons.book, 'Education', _profileData['education']),
-          const SizedBox(height: 12),
+          SizedBox(height: 20),
           _buildInfoRow(
-            Icons.workspace_premium,
-            'Exam Preparation',
-            _profileData['examPrep'],
-          ),
-          const SizedBox(height: 12),
-          _buildInfoRow(Icons.event, 'Target Year', _profileData['targetYear']),
-          const SizedBox(height: 12),
-          _buildInfoRow(Icons.flag, 'Study Goal', _profileData['studyGoal']),
+              Icons.book, 'Education', _profileData?['education'] ?? 'Not set'),
+          SizedBox(height: 12),
+          _buildInfoRow(Icons.workspace_premium, 'Exam Preparation',
+              _profileData?['examPrep'] ?? 'Not set'),
+          SizedBox(height: 12),
+          _buildInfoRow(Icons.event, 'Target Year',
+              _profileData?['targetYear'] ?? 'Not set'),
+          SizedBox(height: 12),
+          _buildInfoRow(Icons.flag, 'Study Goal',
+              _profileData?['studyGoal'] ?? 'Not set'),
         ],
       ),
     );
   }
 
   Widget _buildUsageStatistics() {
+    final totalSeconds = _profileData?['totalStudySeconds'] ?? 0;
+    final studyTime = _profileService.formatStudyTime(totalSeconds);
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: Offset(0, 10))
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.analytics, color: Color(0xFF2196F3), size: 24),
               SizedBox(width: 12),
-              Text(
-                'Usage Statistics',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Ubuntu',
-                ),
-              ),
+              Text('Usage Statistics',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Ubuntu')),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Row(
             children: [
               Expanded(
-                child: _buildStatCard(
-                  '${_profileData['totalStudyTime']}m',
-                  'Study Time',
-                  Icons.timer,
-                  Colors.purple,
-                ),
-              ),
-              const SizedBox(width: 12),
+                  child: _buildStatCard(
+                      studyTime, 'Study Time', Icons.timer, Colors.purple)),
+              SizedBox(width: 12),
               Expanded(
-                child: _buildStatCard(
-                  '${_profileData['resourcesAccessed']}',
-                  'Resources',
-                  Icons.library_books,
-                  Colors.orange,
-                ),
-              ),
+                  child: _buildStatCard(
+                      '${_profileData?['resourcesAccessed'] ?? 0}',
+                      'Resources',
+                      Icons.library_books,
+                      Colors.orange)),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _buildStatCard(
-                  '${_profileData['questionsAttempted']}',
-                  'Questions',
-                  Icons.quiz,
-                  Colors.blue,
-                ),
-              ),
-              const SizedBox(width: 12),
+                  child: _buildStatCard(
+                      '${_profileData?['questionsAttempted'] ?? 0}',
+                      'Questions\nFaced',
+                      Icons.quiz,
+                      Colors.blue)),
+              SizedBox(width: 12),
               Expanded(
-                child: _buildStatCard(
-                  '${_profileData['currentStreak']} 🔥',
-                  'Day Streak',
-                  Icons.local_fire_department,
-                  Colors.red,
-                ),
-              ),
+                  child: _buildStatCard(
+                      '${_profileData?['currentStreak'] ?? 0} 🔥',
+                      'Day Streak',
+                      Icons.local_fire_department,
+                      Colors.red)),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSecuritySection() {
+    final hasSecurityQuestions =
+        (_profileData?['securityQuestions'] as List?)?.isNotEmpty ?? false;
+
+    return Container(
+      padding: EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: Offset(0, 10))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.security, color: Color(0xFF2196F3), size: 24),
+              SizedBox(width: 12),
+              Text('Security',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Ubuntu')),
+            ],
+          ),
+          SizedBox(height: 20),
+          _buildSecurityTile(
+            icon: hasSecurityQuestions
+                ? Icons.check_circle_rounded
+                : Icons.help_outline_rounded,
+            iconColor: hasSecurityQuestions ? Colors.green : Colors.orange,
+            title: 'Security Questions',
+            subtitle: hasSecurityQuestions
+                ? 'Set up — used for password recovery'
+                : 'Not set up — tap to configure',
+            onTap: () => _setupSecurityQuestions(),
+          ),
+          Divider(height: 24),
+          _buildSecurityTile(
+            icon: Icons.lock_reset_rounded,
+            iconColor: Color(0xFF2196F3),
+            title: 'Change Password',
+            subtitle: 'Requires your current password',
+            onTap: () => _showChangePasswordDialog(),
+          ),
+          Divider(height: 24),
+          _buildSecurityTile(
+            icon: Icons.delete_forever_rounded,
+            iconColor: Colors.red,
+            title: 'Delete Account',
+            subtitle: 'Permanently removes all your data',
+            onTap: () => _showDeleteAccountDialog(),
+            titleColor: Colors.red,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecurityTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    Color? titleColor,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 22),
+            ),
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Ubuntu',
+                          color: titleColor ??
+                              Theme.of(context).textTheme.bodyLarge?.color ??
+                              Theme.of(context).colorScheme.onSurface)),
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodySmall?.color ??
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontFamily: 'Ubuntu')),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded,
+                size: 14, color: Colors.grey[400]),
+          ],
+        ),
       ),
     );
   }
@@ -417,28 +490,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       children: [
         Icon(icon, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontFamily: 'Ubuntu',
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Ubuntu',
-                ),
-              ),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).textTheme.bodySmall?.color ??
+                          Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontFamily: 'Ubuntu')),
+              SizedBox(height: 2),
+              Text(value,
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Ubuntu',
+                      color: Theme.of(context).textTheme.bodyLarge?.color ??
+                          Theme.of(context).colorScheme.onSurface)),
             ],
           ),
         ),
@@ -447,910 +517,756 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildStatCard(
-    String value,
-    String label,
-    IconData icon,
-    Color color,
-  ) {
+      String value, String label, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
           Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-              fontFamily: 'Ubuntu',
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[700],
-              fontFamily: 'Ubuntu',
-            ),
-          ),
+          SizedBox(height: 8),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  fontFamily: 'Ubuntu')),
+          SizedBox(height: 4),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).textTheme.bodySmall?.color ??
+                      Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontFamily: 'Ubuntu')),
         ],
       ),
     );
   }
 
-  Future<void> _editAcademicProfile() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AcademicProfileEditor(currentData: _profileData),
-      ),
-    );
-    if (result != null) {
-      setState(() => _profileData = result);
-      await _saveUserProfile();
-    }
-  }
-}
+  void _showChangePasswordDialog() {
+    final oldPassCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
+    bool oldVisible = false, newVisible = false, confirmVisible = false;
+    bool loading = false;
+    String? error;
 
-/// Login Screen with TIMEOUT and RETRY
-class LoginSignupScreen extends StatefulWidget {
-  const LoginSignupScreen({super.key});
-
-  @override
-  State<LoginSignupScreen> createState() => _LoginSignupScreenState();
-}
-
-class _LoginSignupScreenState extends State<LoginSignupScreen> {
-  bool _isLogin = true;
-  bool _isLoading = false;
-  bool _obscurePassword = true;
-
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _nameController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleAuth() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      if (_isLogin) {
-        // ✅ LOGIN WITH 10 SECOND TIMEOUT
-        await _auth
-            .signInWithEmailAndPassword(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-            )
-            .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                throw TimeoutException(
-                  'Login took too long. Check your internet connection.',
-                );
-              },
-            );
-
-        if (mounted) {
-          _navigateToProfile();
-        }
-      } else {
-        // ✅ SIGNUP WITH 10 SECOND TIMEOUT
-        final credential = await _auth
-            .createUserWithEmailAndPassword(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-            )
-            .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                throw TimeoutException(
-                  'Signup took too long. Check your internet connection.',
-                );
-              },
-            );
-
-        // Fire and forget
-        credential.user?.updateDisplayName(_nameController.text.trim());
-
-        if (mounted) {
-          _navigateToProfile();
-        }
-      }
-    } on TimeoutException catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _showErrorWithRetry(
-          '⏱️ Connection Timeout',
-          e.message ?? 'Taking too long. Check your internet and try again.',
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _showError(_getErrorMessage(e.code));
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _showErrorWithRetry(
-          '❌ Connection Error',
-          'Cannot reach servers. Check your internet connection.',
-        );
-      }
-    }
-  }
-
-  void _navigateToProfile() {
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const ProfileScreen(),
-        transitionDuration: const Duration(milliseconds: 150),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOut),
-            ),
-            child: child,
-          );
-        },
-      ),
-    );
-  }
-
-  String _getErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'No user found with this email';
-      case 'wrong-password':
-        return 'Wrong password';
-      case 'email-already-in-use':
-        return 'Email already in use';
-      case 'weak-password':
-        return 'Password too weak (min 6 characters)';
-      case 'invalid-email':
-        return 'Invalid email address';
-      case 'network-request-failed':
-        return 'Network error. Check your connection';
-      case 'too-many-requests':
-        return 'Too many attempts. Wait a moment';
-      default:
-        return 'Error: ${code}. Try again';
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: const TextStyle(fontFamily: 'Ubuntu')),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 4),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showErrorWithRetry(String title, String message) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.orange, size: 28),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontFamily: 'Ubuntu',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                message,
-                style: const TextStyle(fontFamily: 'Ubuntu', fontSize: 14),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              Center(
+                  child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).dividerColor,
+                          borderRadius: BorderRadius.circular(2)))),
+              SizedBox(height: 20),
+              Text('Change Password',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'Ubuntu')),
+              SizedBox(height: 4),
+              Text('Enter your current password first',
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(context).textTheme.bodySmall?.color ??
+                          Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontFamily: 'Ubuntu')),
+              SizedBox(height: 20),
+              if (error != null) ...[
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                        child: Text(error!,
+                            style: TextStyle(
+                                color: Colors.red,
+                                fontFamily: 'Ubuntu',
+                                fontSize: 13))),
+                  ]),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.lightbulb_outline,
-                          size: 18,
-                          color: Colors.blue,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Quick Fixes:',
+                SizedBox(height: 16),
+              ],
+              _buildPassField('Current Password', oldPassCtrl, oldVisible,
+                  () => setModalState(() => oldVisible = !oldVisible)),
+              SizedBox(height: 12),
+              _buildPassField('New Password', newPassCtrl, newVisible,
+                  () => setModalState(() => newVisible = !newVisible)),
+              SizedBox(height: 12),
+              _buildPassField(
+                  'Confirm New Password',
+                  confirmPassCtrl,
+                  confirmVisible,
+                  () => setModalState(() => confirmVisible = !confirmVisible)),
+              SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          if (newPassCtrl.text != confirmPassCtrl.text) {
+                            setModalState(
+                                () => error = 'New passwords do not match');
+                            return;
+                          }
+                          if (newPassCtrl.text.length < 6) {
+                            setModalState(() => error =
+                                'Password must be at least 6 characters');
+                            return;
+                          }
+                          setModalState(() {
+                            loading = true;
+                            error = null;
+                          });
+                          final result = await _profileService.changePassword(
+                              oldPassword: oldPassCtrl.text,
+                              newPassword: newPassCtrl.text);
+                          setModalState(() => loading = false);
+                          if (result['success']) {
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          '✅ Password changed!',
+                                          style:
+                                              TextStyle(fontFamily: 'Ubuntu')),
+                                      backgroundColor: Colors.green));
+                            }
+                          } else {
+                            setModalState(() => error = result['error']);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF2196F3),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: loading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text('Change Password',
                           style: TextStyle(
-                            fontFamily: 'Ubuntu',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTroubleshootingStep(
-                      '1',
-                      'Check WiFi/Mobile Data',
-                      'Make sure you\'re connected to internet',
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTroubleshootingStep(
-                      '2',
-                      'Switch Networks',
-                      'Try WiFi if on mobile data (or vice versa)',
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTroubleshootingStep(
-                      '3',
-                      'Move to Better Signal',
-                      'Poor connection can cause timeouts',
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTroubleshootingStep(
-                      '4',
-                      'Restart App',
-                      'Close completely and reopen',
-                    ),
-                  ],
+                              fontFamily: 'Ubuntu',
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700)),
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Still having issues? The server might be busy. Try again in a moment.',
-                style: TextStyle(
-                  fontFamily: 'Ubuntu',
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showForgotPasswordViaSecurityQuestions();
+                },
+                child: Text('Forgot current password? Use security questions',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF2196F3),
+                        fontFamily: 'Ubuntu')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPassField(String label, TextEditingController ctrl, bool visible,
+      VoidCallback toggleVisible) {
+    return TextField(
+      controller: ctrl,
+      obscureText: !visible,
+      style: TextStyle(fontFamily: 'Ubuntu'),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontFamily: 'Ubuntu', color: Colors.grey[600]),
+        prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF2196F3)),
+        suffixIcon: IconButton(
+          icon: Icon(visible ? Icons.visibility_off : Icons.visibility,
+              color: Colors.grey),
+          onPressed: toggleVisible,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Color(0xFF2196F3), width: 2)),
+      ),
+    );
+  }
+
+  void _showForgotPasswordViaSecurityQuestions() async {
+    final profile = await _profileService.getUserProfile();
+    final questions =
+        List<Map<String, dynamic>>.from(profile?['securityQuestions'] ?? []);
+
+    if (questions.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'No security questions set up. Please contact support.',
+                style: TextStyle(fontFamily: 'Ubuntu')),
+            backgroundColor: Colors.orange));
+      }
+      return;
+    }
+
+    final question = questions.first;
+    final answerCtrl = TextEditingController();
+    bool loading = false;
+    String? error;
+
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                  child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).dividerColor,
+                          borderRadius: BorderRadius.circular(2)))),
+              SizedBox(height: 20),
+              Text('Verify Identity',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'Ubuntu')),
+              SizedBox(height: 8),
+              Container(
+                padding: EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                ),
+                child: Row(children: [
+                  Icon(Icons.help_outline, color: Color(0xFF2196F3), size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                      child: Text(question['question'] as String,
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontFamily: 'Ubuntu',
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.color ??
+                                  Theme.of(context).colorScheme.onSurface))),
+                ]),
+              ),
+              SizedBox(height: 16),
+              if (error != null) ...[
+                Text(error!,
+                    style: TextStyle(
+                        color: Colors.red, fontFamily: 'Ubuntu', fontSize: 13)),
+                SizedBox(height: 10),
+              ],
+              TextField(
+                controller: answerCtrl,
+                style: TextStyle(fontFamily: 'Ubuntu'),
+                decoration: InputDecoration(
+                  labelText: 'Your Answer',
+                  labelStyle:
+                      TextStyle(fontFamily: 'Ubuntu', color: Colors.grey[600]),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Color(0xFF2196F3), width: 2)),
+                ),
+              ),
+              SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          setModalState(() {
+                            loading = true;
+                            error = null;
+                          });
+                          final verified =
+                              await _profileService.verifySecurityAnswer(
+                                  question['question'] as String,
+                                  answerCtrl.text);
+                          setModalState(() => loading = false);
+                          if (verified) {
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            await FirebaseAuth.instance.sendPasswordResetEmail(
+                                email: _currentUser!.email!);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          '✅ Password reset email sent!',
+                                          style:
+                                              TextStyle(fontFamily: 'Ubuntu')),
+                                      backgroundColor: Colors.green));
+                            }
+                          } else {
+                            setModalState(
+                                () => error = 'Incorrect answer. Try again.');
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF2196F3),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: loading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text('Verify & Reset Password',
+                          style: TextStyle(
+                              fontFamily: 'Ubuntu',
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700)),
                 ),
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(fontFamily: 'Ubuntu', color: Colors.grey),
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              _handleAuth(); // Retry
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2196F3),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            icon: const Icon(Icons.refresh, color: Colors.white, size: 18),
-            label: const Text(
-              'Try Again',
-              style: TextStyle(
-                fontFamily: 'Ubuntu',
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    final passCtrl = TextEditingController();
+    bool loading = false;
+    String? error;
+    bool visible = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                  child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).dividerColor,
+                          borderRadius: BorderRadius.circular(2)))),
+              SizedBox(height: 20),
+              Row(children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.delete_forever_rounded,
+                      color: Colors.red, size: 24),
+                ),
+                SizedBox(width: 12),
+                Text('Delete Account',
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'Ubuntu',
+                        color: Colors.red)),
+              ]),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  '⚠️ This action is permanent and cannot be undone. All your data, progress, and profile will be permanently deleted.',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontFamily: 'Ubuntu',
+                      color: Theme.of(context).textTheme.bodyLarge?.color ??
+                          Theme.of(context).colorScheme.onSurface,
+                      height: 1.5),
+                ),
               ),
+              SizedBox(height: 20),
+              if (error != null) ...[
+                Text(error!,
+                    style: TextStyle(
+                        color: Colors.red, fontFamily: 'Ubuntu', fontSize: 13)),
+                SizedBox(height: 10),
+              ],
+              _buildPassField('Enter your password to confirm', passCtrl,
+                  visible, () => setModalState(() => visible = !visible)),
+              SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          if (passCtrl.text.isEmpty) {
+                            setModalState(
+                                () => error = 'Please enter your password');
+                            return;
+                          }
+                          setModalState(() {
+                            loading = true;
+                            error = null;
+                          });
+                          final result = await _profileService.deleteAccount(
+                              password: passCtrl.text);
+                          if (result['success']) {
+                            _profileService.clearCache();
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (mounted) {
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                    builder: (_) => const LoginScreen()),
+                                (_) => false,
+                              );
+                            }
+                          } else {
+                            setModalState(() {
+                              loading = false;
+                              error = result['error'];
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: loading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text('Delete My Account',
+                          style: TextStyle(
+                              fontFamily: 'Ubuntu',
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setupSecurityQuestions() async {
+    await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => const SecurityQuestionsSetupScreen()));
+    _loadProfile();
+  }
+
+  Future<void> _editAcademicProfile() async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                AcademicProfileEditor(currentData: _profileData ?? {})));
+    if (result != null) {
+      await _firebase.updateProfile(result);
+      _profileService.clearCache();
+      _loadProfile();
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
+// SECURITY QUESTIONS SETUP SCREEN
+// ─────────────────────────────────────────────
+class SecurityQuestionsSetupScreen extends StatefulWidget {
+  const SecurityQuestionsSetupScreen({super.key});
+
+  @override
+  State<SecurityQuestionsSetupScreen> createState() =>
+      _SecurityQuestionsSetupScreenState();
+}
+
+class _SecurityQuestionsSetupScreenState
+    extends State<SecurityQuestionsSetupScreen> {
+  final ProfileService _profileService = ProfileService();
+
+  final List<String> _availableQuestions = [
+    'What was the name of your first pet?',
+    "What is your mother's maiden name?",
+    'What city were you born in?',
+    'What was the name of your first school?',
+    "What is your oldest sibling's middle name?",
+    'What was the make of your first car?',
+    'What is the name of the street you grew up on?',
+    'What was your childhood nickname?',
+  ];
+
+  String? _selectedQ1, _selectedQ2;
+  final _answer1Ctrl = TextEditingController();
+  final _answer2Ctrl = TextEditingController();
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _answer1Ctrl.dispose();
+    _answer2Ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFFF8F9FA),
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: Color(0xFF2196F3), size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text('Security Questions',
+            style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color ??
+                    Theme.of(context).colorScheme.onSurface,
+                fontFamily: 'Ubuntu',
+                fontWeight: FontWeight.w700,
+                fontSize: 18)),
+      ),
+      body: ListView(
+        padding: EdgeInsets.all(20),
+        children: [
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
             ),
+            child: Row(children: [
+              Icon(Icons.info_outline, color: Color(0xFF2196F3), size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                  child: Text(
+                      'Security questions are used to verify your identity if you forget your password.',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontFamily: 'Ubuntu',
+                          color: Theme.of(context).textTheme.bodyLarge?.color ??
+                              Theme.of(context).colorScheme.onSurface,
+                          height: 1.5))),
+            ]),
+          ),
+          SizedBox(height: 24),
+          if (_error != null) ...[
+            Text(_error!,
+                style: TextStyle(color: Colors.red, fontFamily: 'Ubuntu')),
+            SizedBox(height: 12),
+          ],
+          _buildQuestionPicker('Question 1', _availableQuestions, _selectedQ1,
+              (v) => setState(() => _selectedQ1 = v), _answer1Ctrl),
+          SizedBox(height: 20),
+          _buildQuestionPicker(
+              'Question 2',
+              _availableQuestions.where((q) => q != _selectedQ1).toList(),
+              _selectedQ2,
+              (v) => setState(() => _selectedQ2 = v),
+              _answer2Ctrl),
+          SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: _loading ? null : _save,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF2196F3),
+              padding: EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+            ),
+            child: _loading
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : Text('Save Security Questions',
+                    style: TextStyle(
+                        fontFamily: 'Ubuntu',
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTroubleshootingStep(
-    String number,
-    String title,
-    String description,
-  ) {
-    return Row(
+  Widget _buildQuestionPicker(
+      String label,
+      List<String> questions,
+      String? selected,
+      ValueChanged<String?> onChanged,
+      TextEditingController answerCtrl) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
-          child: Center(
-            child: Text(
-              number,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+        Text(label,
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
                 fontFamily: 'Ubuntu',
-              ),
+                color: Theme.of(context).textTheme.bodyLarge?.color ??
+                    Theme.of(context).colorScheme.onSurface)),
+        SizedBox(height: 8),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Theme.of(context).dividerColor)),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: selected,
+              isExpanded: true,
+              hint: Text('Choose a question',
+                  style: TextStyle(
+                      color: Theme.of(context).dividerColor,
+                      fontFamily: 'Ubuntu')),
+              style: TextStyle(
+                  fontFamily: 'Ubuntu',
+                  color: Theme.of(context).textTheme.bodyLarge?.color ??
+                      Theme.of(context).colorScheme.onSurface,
+                  fontSize: 14),
+              items: questions
+                  .map((q) => DropdownMenuItem(
+                      value: q,
+                      child: Text(q,
+                          style:
+                              TextStyle(fontFamily: 'Ubuntu', fontSize: 13))))
+                  .toList(),
+              onChanged: onChanged,
             ),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontFamily: 'Ubuntu',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                description,
-                style: TextStyle(
-                  fontFamily: 'Ubuntu',
-                  fontSize: 11,
-                  color: Colors.grey[700],
-                ),
-              ),
-            ],
+        SizedBox(height: 10),
+        TextField(
+          controller: answerCtrl,
+          style: TextStyle(fontFamily: 'Ubuntu'),
+          decoration: InputDecoration(
+            labelText: 'Your Answer',
+            labelStyle:
+                TextStyle(fontFamily: 'Ubuntu', color: Colors.grey[600]),
+            filled: true,
+            fillColor: Theme.of(context).cardColor,
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Theme.of(context).dividerColor)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Theme.of(context).dividerColor)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Color(0xFF2196F3), width: 2)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildHelpItem(IconData icon, String title, String description) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2196F3).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, size: 20, color: const Color(0xFF2196F3)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: 'Ubuntu',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontFamily: 'Ubuntu',
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Align(
-                alignment: Alignment.topLeft,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Logo
-                          TweenAnimationBuilder(
-                            tween: Tween<double>(begin: 0, end: 1),
-                            duration: const Duration(milliseconds: 600),
-                            builder: (context, double value, child) {
-                              return Transform.scale(
-                                scale: value,
-                                child: Opacity(opacity: value, child: child),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Color(0xFF2196F3),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          Text(
-                            _isLogin ? 'Welcome Back!' : 'Create Account',
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              fontFamily: 'Ubuntu',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _isLogin
-                                ? 'Sign in to continue'
-                                : 'Join RIZ Learning Hub',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
-                              fontFamily: 'Ubuntu',
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          // ✅ HELPFUL TIPS BANNER
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.info_outline,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Having trouble logging in?',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Ubuntu',
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Check WiFi • Switch networks • Restart app',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.9),
-                                          fontSize: 11,
-                                          fontFamily: 'Ubuntu',
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          if (!_isLogin) ...[
-                            _buildTextField(
-                              controller: _nameController,
-                              label: 'Full Name',
-                              icon: Icons.person_outline,
-                              validator: (v) => (v == null || v.isEmpty)
-                                  ? 'Enter name'
-                                  : (v.length < 2 ? 'Too short' : null),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-
-                          _buildTextField(
-                            controller: _emailController,
-                            label: 'Email',
-                            icon: Icons.email_outlined,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (v) => (v == null || v.isEmpty)
-                                ? 'Enter email'
-                                : (!v.contains('@') ? 'Invalid email' : null),
-                          ),
-                          const SizedBox(height: 16),
-
-                          _buildTextField(
-                            controller: _passwordController,
-                            label: 'Password',
-                            icon: Icons.lock_outline,
-                            obscureText: _obscurePassword,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                                color: Colors.white70,
-                              ),
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
-                            ),
-                            validator: (v) => (v == null || v.isEmpty)
-                                ? 'Enter password'
-                                : (v.length < 6 ? 'Min 6 chars' : null),
-                          ),
-                          const SizedBox(height: 32),
-
-                          // Button with timeout indicator
-                          SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _handleAuth,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFF2196F3),
-                                disabledBackgroundColor: Colors.white
-                                    .withOpacity(0.7),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                elevation: 8,
-                              ),
-                              child: _isLoading
-                                  ? Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        const SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Color(0xFF2196F3),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Text(
-                                          _isLogin
-                                              ? 'Signing in... (max 10s)'
-                                              : 'Creating account... (max 10s)',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                            fontFamily: 'Ubuntu',
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : Text(
-                                      _isLogin ? 'Login' : 'Sign Up',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        fontFamily: 'Ubuntu',
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // ✅ QUICK HELP BUTTON
-                          TextButton.icon(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Row(
-                                    children: [
-                                      Icon(
-                                        Icons.help_outline,
-                                        color: Color(0xFF2196F3),
-                                      ),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'Connection Help',
-                                        style: TextStyle(
-                                          fontFamily: 'Ubuntu',
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  content: SingleChildScrollView(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'If login is slow or timing out:',
-                                          style: TextStyle(
-                                            fontFamily: 'Ubuntu',
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        _buildHelpItem(
-                                          Icons.wifi,
-                                          'Check Internet',
-                                          'Make sure WiFi or mobile data is ON',
-                                        ),
-                                        _buildHelpItem(
-                                          Icons.signal_cellular_alt,
-                                          'Strong Signal',
-                                          'Move to better network coverage',
-                                        ),
-                                        _buildHelpItem(
-                                          Icons.swap_horiz,
-                                          'Switch Networks',
-                                          'Try WiFi if using mobile data',
-                                        ),
-                                        _buildHelpItem(
-                                          Icons.refresh,
-                                          'Restart App',
-                                          'Close completely and reopen',
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.withOpacity(
-                                              0.1,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: const Row(
-                                            children: [
-                                              Icon(
-                                                Icons.check_circle,
-                                                size: 20,
-                                                color: Colors.green,
-                                              ),
-                                              SizedBox(width: 12),
-                                              Expanded(
-                                                child: Text(
-                                                  'Normal login: 1-3 seconds',
-                                                  style: TextStyle(
-                                                    fontFamily: 'Ubuntu',
-                                                    fontSize: 12,
-                                                    color: Colors.green,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  actions: [
-                                    ElevatedButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF2196F3,
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'Got it!',
-                                        style: TextStyle(
-                                          fontFamily: 'Ubuntu',
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.help_outline,
-                              color: Colors.white70,
-                              size: 18,
-                            ),
-                            label: const Text(
-                              'Having connection issues?',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontFamily: 'Ubuntu',
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                _isLogin
-                                    ? "Don't have an account? "
-                                    : 'Already have an account? ',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontFamily: 'Ubuntu',
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: _isLoading
-                                    ? null
-                                    : () {
-                                        setState(() {
-                                          _isLogin = !_isLogin;
-                                          _formKey.currentState?.reset();
-                                        });
-                                      },
-                                child: Text(
-                                  _isLogin ? 'Sign Up' : 'Login',
-                                  style: TextStyle(
-                                    color: _isLoading
-                                        ? Colors.white54
-                                        : Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontFamily: 'Ubuntu',
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool obscureText = false,
-    TextInputType? keyboardType,
-    Widget? suffixIcon,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      enabled: !_isLoading,
-      style: TextStyle(
-        color: _isLoading ? Colors.white54 : Colors.white,
-        fontFamily: 'Ubuntu',
-      ),
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          color: _isLoading ? Colors.white38 : Colors.white70,
-          fontFamily: 'Ubuntu',
-        ),
-        prefixIcon: Icon(
-          icon,
-          color: _isLoading ? Colors.white38 : Colors.white70,
-        ),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: Colors.white.withOpacity(_isLoading ? 0.05 : 0.1),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.white30),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.white30),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.white, width: 2),
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        errorStyle: const TextStyle(fontFamily: 'Ubuntu'),
-      ),
-    );
+  Future<void> _save() async {
+    if (_selectedQ1 == null || _selectedQ2 == null) {
+      setState(() => _error = 'Please select both questions');
+      return;
+    }
+    if (_answer1Ctrl.text.trim().isEmpty || _answer2Ctrl.text.trim().isEmpty) {
+      setState(() => _error = 'Please answer both questions');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    await _profileService.saveSecurityQuestions([
+      {
+        'question': _selectedQ1!,
+        'answer': _answer1Ctrl.text.trim().toLowerCase()
+      },
+      {
+        'question': _selectedQ2!,
+        'answer': _answer2Ctrl.text.trim().toLowerCase()
+      },
+    ]);
+    if (mounted) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('✅ Security questions saved!',
+              style: TextStyle(fontFamily: 'Ubuntu')),
+          backgroundColor: Colors.green));
+      Navigator.pop(context);
+    }
   }
 }
 
-/// Academic Profile Editor
+// ─────────────────────────────────────────────
+// ACADEMIC PROFILE EDITOR
+// ─────────────────────────────────────────────
 class AcademicProfileEditor extends StatefulWidget {
   final Map<String, dynamic> currentData;
   const AcademicProfileEditor({super.key, required this.currentData});
@@ -1361,6 +1277,7 @@ class AcademicProfileEditor extends StatefulWidget {
 
 class _AcademicProfileEditorState extends State<AcademicProfileEditor> {
   late Map<String, dynamic> _editedData;
+
   final List<String> _educationLevels = [
     'High School',
     'Undergraduate',
@@ -1376,7 +1293,7 @@ class _AcademicProfileEditorState extends State<AcademicProfileEditor> {
     'Defence',
     'Other',
   ];
-  final List<String> _targetYears = ['2024', '2025', '2026', '2027', '2028'];
+  final List<String> _targetYears = ['2025', '2026', '2027', '2028'];
 
   @override
   void initState() {
@@ -1388,41 +1305,32 @@ class _AcademicProfileEditorState extends State<AcademicProfileEditor> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(fontFamily: 'Ubuntu'),
-        ),
-        backgroundColor: const Color(0xFF2196F3),
+        title: Text('Edit Profile', style: TextStyle(fontFamily: 'Ubuntu')),
+        backgroundColor: Color(0xFF2196F3),
         foregroundColor: Colors.white,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         children: [
           _buildDropdown('Education', _educationLevels, 'education'),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           _buildDropdown('Exam Prep', _examTypes, 'examPrep'),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           _buildDropdown('Target Year', _targetYears, 'targetYear'),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           _buildTextField('Study Goal', 'studyGoal'),
-          const SizedBox(height: 32),
+          SizedBox(height: 32),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, _editedData),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2196F3),
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Color(0xFF2196F3),
+              padding: EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text(
-              'Save',
-              style: TextStyle(
-                fontSize: 16,
-                fontFamily: 'Ubuntu',
-                color: Colors.white,
-              ),
-            ),
+            child: Text('Save',
+                style: TextStyle(
+                    fontSize: 16, fontFamily: 'Ubuntu', color: Colors.white)),
           ),
         ],
       ),
@@ -1433,31 +1341,25 @@ class _AcademicProfileEditorState extends State<AcademicProfileEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Ubuntu',
-          ),
-        ),
-        const SizedBox(height: 8),
+        Text(label,
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Ubuntu',
+                color: Theme.of(context).textTheme.bodyLarge?.color ??
+                    Theme.of(context).colorScheme.onSurface)),
+        SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: _editedData[key] == 'Not set' ? null : _editedData[key],
           decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-          ),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
           items: options
-              .map(
-                (o) => DropdownMenuItem(
+              .map((o) => DropdownMenuItem(
                   value: o,
-                  child: Text(o, style: const TextStyle(fontFamily: 'Ubuntu')),
-                ),
-              )
+                  child: Text(o, style: TextStyle(fontFamily: 'Ubuntu'))))
               .toList(),
           onChanged: (v) => setState(() => _editedData[key] = v ?? 'Not set'),
         ),
@@ -1469,27 +1371,327 @@ class _AcademicProfileEditorState extends State<AcademicProfileEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Ubuntu',
-          ),
-        ),
-        const SizedBox(height: 8),
+        Text(label,
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Ubuntu',
+                color: Theme.of(context).textTheme.bodyLarge?.color ??
+                    Theme.of(context).colorScheme.onSurface)),
+        SizedBox(height: 8),
         TextFormField(
           initialValue: _editedData[key] == 'Not set' ? '' : _editedData[key],
           decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-          ),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
           onChanged: (v) => _editedData[key] = v.isEmpty ? 'Not set' : v,
         ),
       ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOGIN / SIGNUP SCREEN
+// ═══════════════════════════════════════════════════════════
+class LoginSignupScreen extends StatefulWidget {
+  const LoginSignupScreen({super.key});
+
+  @override
+  State<LoginSignupScreen> createState() => _LoginSignupScreenState();
+}
+
+class _LoginSignupScreenState extends State<LoginSignupScreen> {
+  bool _isLogin = true;
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _rememberMe = false;
+
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseService _firebase = FirebaseService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedEmail();
+  }
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSavedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('saved_email');
+    if (savedEmail != null && mounted) {
+      setState(() {
+        _emailCtrl.text = savedEmail;
+        _rememberMe = true;
+      });
+    }
+  }
+
+  Future<void> _saveOrClearEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setString('saved_email', _emailCtrl.text.trim());
+    } else {
+      await prefs.remove('saved_email');
+    }
+  }
+
+  Future<void> _handleAuth() async {
+    if (!_formKey.currentState!.validate()) return;
+    await _saveOrClearEmail();
+    setState(() => _isLoading = true);
+
+    try {
+      if (_isLogin) {
+        await _auth
+            .signInWithEmailAndPassword(
+                email: _emailCtrl.text.trim(), password: _passwordCtrl.text)
+            .timeout(Duration(seconds: 10));
+      } else {
+        final cred = await _auth
+            .createUserWithEmailAndPassword(
+                email: _emailCtrl.text.trim(), password: _passwordCtrl.text)
+            .timeout(Duration(seconds: 10));
+
+        // ✅ Set Auth displayName — do this first, it's fast
+        await cred.user?.updateDisplayName(_nameCtrl.text.trim());
+
+        // ✅ Create Firestore doc — wrapped in its own try/catch.
+        // If Firestore is slow or rules block it, the user is STILL
+        // authenticated. getUserProfile() will create the doc on next load.
+        try {
+          await _firebase.createUserProfile(
+              name: _nameCtrl.text.trim(), email: _emailCtrl.text.trim());
+        } catch (firestoreErr) {
+          debugPrint(
+              '⚠️ Firestore profile creation failed (non-fatal): $firestoreErr');
+        }
+      }
+      // ✅ Always pushReplacement to ProfileScreen after successful auth.
+      // Works whether LoginSignupScreen is the root or pushed on top.
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+          (route) => false, // clear entire back stack
+        );
+      }
+    } on TimeoutException {
+      if (mounted) setState(() => _isLoading = false);
+      _showError('Connection timeout. Check your internet.');
+    } on FirebaseAuthException catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+      _showError(_getErrorMessage(e.code));
+    } catch (e) {
+      // Show the REAL error in terminal and to user — no more mystery "Connection error"
+      debugPrint('❌ _handleAuth unexpected error: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showError(e.toString());
+      }
+    }
+  }
+
+  String _getErrorMessage(String code) {
+    switch (code) {
+      case 'user-not-found':
+        return 'No user found with this email';
+      case 'wrong-password':
+        return 'Wrong password';
+      case 'email-already-in-use':
+        return 'Email already in use';
+      case 'weak-password':
+        return 'Password too weak (min 6 chars)';
+      case 'invalid-email':
+        return 'Invalid email address';
+      default:
+        return 'Error: $code';
+    }
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg, style: TextStyle(fontFamily: 'Ubuntu')),
+        backgroundColor: Colors.red));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF2196F3), Color(0xFF1976D2)]),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Align(
+                  alignment: Alignment.topLeft,
+                  child: IconButton(
+                      icon:
+                          Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                      onPressed: () => Navigator.pop(context))),
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          Icon(Icons.person, size: 80, color: Colors.white),
+                          SizedBox(height: 24),
+                          Text(_isLogin ? 'Welcome Back!' : 'Create Account',
+                              style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  fontFamily: 'Ubuntu')),
+                          SizedBox(height: 32),
+                          if (!_isLogin) ...[
+                            _buildField(
+                                controller: _nameCtrl,
+                                label: 'Full Name',
+                                icon: Icons.person_outline,
+                                validator: (v) =>
+                                    v!.isEmpty ? 'Enter name' : null),
+                            SizedBox(height: 16),
+                          ],
+                          _buildField(
+                              controller: _emailCtrl,
+                              label: 'Email',
+                              icon: Icons.email_outlined,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (v) =>
+                                  !v!.contains('@') ? 'Invalid email' : null),
+                          SizedBox(height: 16),
+                          _buildField(
+                              controller: _passwordCtrl,
+                              label: 'Password',
+                              icon: Icons.lock_outline,
+                              obscure: _obscurePassword,
+                              toggleObscure: () => setState(
+                                  () => _obscurePassword = !_obscurePassword),
+                              validator: (v) =>
+                                  v!.length < 6 ? 'Min 6 chars' : null),
+                          SizedBox(height: 12),
+                          if (_isLogin)
+                            Row(children: [
+                              Checkbox(
+                                  value: _rememberMe,
+                                  onChanged: (val) => setState(
+                                      () => _rememberMe = val ?? false),
+                                  activeColor: Colors.white,
+                                  checkColor: Color(0xFF2196F3),
+                                  side: BorderSide(
+                                      color: Colors.white70, width: 2)),
+                              Text('Remember Me',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontFamily: 'Ubuntu',
+                                      fontSize: 14)),
+                            ]),
+                          SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _handleAuth,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Color(0xFF2196F3),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16)),
+                                elevation: 8,
+                              ),
+                              child: _isLoading
+                                  ? CircularProgressIndicator(
+                                      color: Color(0xFF2196F3), strokeWidth: 2)
+                                  : Text(_isLogin ? 'Login' : 'Sign Up',
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          fontFamily: 'Ubuntu')),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: () => setState(() => _isLogin = !_isLogin),
+                            child: Text(
+                                _isLogin
+                                    ? "Don't have an account? Sign Up"
+                                    : 'Already have an account? Login',
+                                style: TextStyle(
+                                    color: Colors.white70,
+                                    fontFamily: 'Ubuntu')),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscure = false,
+    VoidCallback? toggleObscure,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      style: TextStyle(color: Colors.white, fontFamily: 'Ubuntu'),
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.white70, fontFamily: 'Ubuntu'),
+        prefixIcon: Icon(icon, color: Colors.white70),
+        suffixIcon: toggleObscure != null
+            ? IconButton(
+                icon: Icon(obscure ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.white70),
+                onPressed: toggleObscure)
+            : null,
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.1),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: Colors.white30)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: Colors.white30)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: Colors.white, width: 2)),
+        errorStyle: TextStyle(fontFamily: 'Ubuntu'),
+      ),
     );
   }
 }

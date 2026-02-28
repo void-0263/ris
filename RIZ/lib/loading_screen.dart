@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
 /// Beautiful animated loading screen
-/// Converted from HTML/CSS WiFi loader animation
 class LoadingScreen extends StatefulWidget {
   final VoidCallback onLoadingComplete;
 
@@ -22,27 +21,28 @@ class _LoadingScreenState extends State<LoadingScreen>
   void initState() {
     super.initState();
 
-    // Outer circle animation (1.8s)
     _outerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat();
 
-    // Middle circle animation (1.8s)
     _middleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat();
 
-    // Text animation (3.6s)
     _textController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3600),
     )..repeat();
 
-    // Complete loading after 3 seconds
-    Future.delayed(const Duration(seconds: 5), () {
+    // ✅ FIX: Stop all controllers BEFORE calling onLoadingComplete
+    // so they don't keep painting after the screen is gone
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
+        _outerController.stop();
+        _middleController.stop();
+        _textController.stop();
         widget.onLoadingComplete();
       }
     });
@@ -64,17 +64,13 @@ class _LoadingScreenState extends State<LoadingScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF2196F3), // Blue
-              Color(0xFF1976D2), // Darker blue
-            ],
+            colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
           ),
         ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Loader
               SizedBox(
                 width: 100,
                 height: 100,
@@ -90,8 +86,8 @@ class _LoadingScreenState extends State<LoadingScreen>
                           painter: CirclePainter(
                             progress: _outerController.value,
                             strokeWidth: 6,
-                            color: const Color(0xFFc3c8de), // Back color
-                            frontColor: const Color(0xFFef4d86), // Front color
+                            color: const Color(0xFFc3c8de),
+                            frontColor: const Color(0xFFef4d86),
                             radius: 40,
                             type: 'outer',
                           ),
@@ -107,10 +103,8 @@ class _LoadingScreenState extends State<LoadingScreen>
                           painter: CirclePainter(
                             progress: _middleController.value,
                             strokeWidth: 6,
-                            color: const Color(0xFFc3c8de), // Back color
-                            frontColor: const Color(
-                              0xFFfbb216,
-                            ), // Front color in
+                            color: const Color(0xFFc3c8de),
+                            frontColor: const Color(0xFFfbb216),
                             radius: 27,
                             type: 'middle',
                           ),
@@ -121,7 +115,6 @@ class _LoadingScreenState extends State<LoadingScreen>
                 ),
               ),
               const SizedBox(height: 60),
-              // Animated "Loading..." text
               AnimatedBuilder(
                 animation: _textController,
                 builder: (context, child) {
@@ -130,7 +123,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                       alignment: Alignment.centerLeft,
                       widthFactor: _getTextProgress(_textController.value),
                       child: const Text(
-                        'patience 🤫🤫',
+                        'patience...',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -151,11 +144,10 @@ class _LoadingScreenState extends State<LoadingScreen>
   }
 
   double _getTextProgress(double value) {
-    // Text animation: 0 → 1 → 0
     if (value < 0.5) {
-      return value * 2; // 0 to 1
+      return value * 2;
     } else {
-      return 2 - (value * 2); // 1 to 0
+      return 2 - (value * 2);
     }
   }
 }
@@ -181,7 +173,6 @@ class CirclePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
 
-    // Back circle (always visible)
     final backPaint = Paint()
       ..color = color
       ..strokeWidth = strokeWidth
@@ -190,7 +181,6 @@ class CirclePainter extends CustomPainter {
 
     canvas.drawCircle(center, radius, backPaint);
 
-    // Animated front circle
     final frontPaint = Paint()
       ..color = frontColor
       ..strokeWidth = strokeWidth
@@ -201,7 +191,6 @@ class CirclePainter extends CustomPainter {
     double dashArray = 0;
 
     if (type == 'outer') {
-      // Outer circle animation
       dashArray = 62.75;
       if (progress < 0.25) {
         dashOffset = 25 - (progress * 100);
@@ -211,7 +200,6 @@ class CirclePainter extends CustomPainter {
         dashOffset = 25;
       }
     } else {
-      // Middle circle animation
       dashArray = 42.5;
       if (progress < 0.25) {
         dashOffset = 17 - (progress * 68);

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:demo/main.dart'; // Ensure 'demo' matches your project name
+import 'package:riz/main.dart'; // Ensure 'demo' matches your project name
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {

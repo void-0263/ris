@@ -1,111 +1,190 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'firebase_service.dart';
 
-/// Profile Service - Manages user profile and usage statistics
+/// ProfileService - Thin caching layer over FirebaseService
 class ProfileService {
   static final ProfileService _instance = ProfileService._internal();
   factory ProfileService() => _instance;
   ProfileService._internal();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseService _firebase = FirebaseService();
 
-  /// Get current user's profile data
-  Future<Map<String, dynamic>?> getUserProfile() async {
-    final user = _auth.currentUser;
-    if (user == null) return null;
+  // ══════════════════════════════════════════════
+  // CACHE
+  // ══════════════════════════════════════════════
 
-    final prefs = await SharedPreferences.getInstance();
-    final profileJson = prefs.getString('profile_${user.uid}');
+  Map<String, dynamic>? _cachedProfile;
+  DateTime? _cacheTime;
+  static const _cacheDuration = Duration(minutes: 5);
 
-    if (profileJson != null) {
-      return Map<String, dynamic>.from(json.decode(profileJson));
+  bool get _cacheValid =>
+      _cachedProfile != null &&
+      _cacheTime != null &&
+      DateTime.now().difference(_cacheTime!) < _cacheDuration;
+
+  void clearCache() {
+    _cachedProfile = null;
+    _cacheTime = null;
+  }
+
+  // ══════════════════════════════════════════════
+  // PROFILE
+  // ══════════════════════════════════════════════
+
+  Future<Map<String, dynamic>?> getUserProfile(
+      {bool forceRefresh = false}) async {
+    if (!forceRefresh && _cacheValid) return _cachedProfile;
+
+    // ✅ FIXED: FirebaseService.getUserProfile() now auto-creates doc if missing
+    final data = await _firebase.getUserProfile();
+
+    if (data != null) {
+      _cachedProfile = data;
+      _cacheTime = DateTime.now();
+    } else {
+      // Still null means user is not authenticated
+      debugPrint('⚠️ ProfileService: getUserProfile returned null');
     }
-    return null;
+
+    return data;
   }
 
-  /// Save user profile data
-  Future<void> saveUserProfile(Map<String, dynamic> profileData) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+  /// Get stats for home screen
+  Future<Map<String, dynamic>> getUserStats() async {
+    final profile = await getUserProfile(forceRefresh: true);
+    final totalSeconds = profile?['totalStudySeconds'] ?? 0;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('profile_${user.uid}', json.encode(profileData));
+    return {
+      'name': profile?['name'] ?? _auth.currentUser?.displayName ?? 'Learner',
+      'totalStudySeconds': totalSeconds,
+      'resourcesAccessed': profile?['resourcesAccessed'] ?? 0,
+      'questionsAttempted': profile?['questionsAttempted'] ?? 0,
+      'currentStreak': profile?['currentStreak'] ?? 0,
+      'longestStreak': profile?['longestStreak'] ?? 0,
+    };
   }
 
-  /// Update when user accesses a resource (article, study material, etc.)
+  // ══════════════════════════════════════════════
+  // EMAIL MASKING
+  // ══════════════════════════════════════════════
+
+  String maskEmail(String email) {
+    if (email.isEmpty) return '';
+    final parts = email.split('@');
+    if (parts.length != 2) return email;
+    final name = parts[0];
+    final domain = parts[1];
+    if (name.length <= 2) return '${'*' * name.length}@$domain';
+    return '${name.substring(0, 2)}${'*' * (name.length - 2)}@$domain';
+  }
+
+  // ══════════════════════════════════════════════
+  // TRACKING
+  // ══════════════════════════════════════════════
+
+  Future<void> updateStreak() async {
+    if (_auth.currentUser == null) return;
+    await _firebase.updateStreak();
+    clearCache();
+  }
+
   Future<void> trackResourceAccessed() async {
-    final profile = await getUserProfile();
-    if (profile == null) return;
-
-    profile['resourcesAccessed'] = (profile['resourcesAccessed'] ?? 0) + 1;
-    await saveUserProfile(profile);
-    print('📚 Resource accessed! Total: ${profile['resourcesAccessed']}');
+    if (_auth.currentUser == null) return;
+    await _firebase.incrementResourcesAccessed();
+    clearCache();
   }
 
-  /// Update when user attempts a question
-  Future<void> trackQuestionAttempted() async {
-    final profile = await getUserProfile();
-    if (profile == null) return;
-
-    profile['questionsAttempted'] = (profile['questionsAttempted'] ?? 0) + 1;
-    await saveUserProfile(profile);
-    print('❓ Question attempted! Total: ${profile['questionsAttempted']}');
+  Future<void> trackQuestionFaced() async {
+    if (_auth.currentUser == null) return;
+    await _firebase.incrementQuestionsAttempted();
+    clearCache();
   }
 
-  /// Update study time (in minutes)
-  Future<void> addStudyTime(int minutes) async {
-    final profile = await getUserProfile();
-    if (profile == null) return;
+  // ══════════════════════════════════════════════
+  // STUDY SESSION TRACKING
+  // ══════════════════════════════════════════════
 
-    profile['totalStudyTime'] = (profile['totalStudyTime'] ?? 0) + minutes;
-    await saveUserProfile(profile);
-    print(
-      '⏱️ Study time added: $minutes min. Total: ${profile['totalStudyTime']} min',
+  String? _activeSessionId;
+  DateTime? _sessionStartTime;
+
+  Future<void> startStudySession(String screenName) async {
+    if (_auth.currentUser == null) return;
+    if (_activeSessionId != null) await endStudySession();
+
+    _sessionStartTime = DateTime.now();
+    _activeSessionId = await _firebase.startStudySession(screenName);
+    debugPrint('▶️ Study started: $screenName');
+  }
+
+  Future<void> endStudySession() async {
+    if (_activeSessionId == null || _sessionStartTime == null) return;
+
+    final seconds = DateTime.now().difference(_sessionStartTime!).inSeconds;
+
+    if (seconds >= 10) {
+      await _firebase.endStudySession(_activeSessionId!, seconds);
+      debugPrint('⏹️ Study ended: $seconds sec');
+    }
+
+    _activeSessionId = null;
+    _sessionStartTime = null;
+    clearCache();
+  }
+
+  String formatStudyTime(int totalSeconds) {
+    if (totalSeconds < 60) return '${totalSeconds}s';
+    final minutes = totalSeconds ~/ 60;
+    final hours = minutes ~/ 60;
+    final remainingMins = minutes % 60;
+    if (hours > 0) {
+      return remainingMins > 0 ? '${hours}h ${remainingMins}m' : '${hours}h';
+    }
+    return '${minutes}m';
+  }
+
+  // ══════════════════════════════════════════════
+  // SECURITY QUESTIONS
+  // ══════════════════════════════════════════════
+
+  Future<void> saveSecurityQuestions(
+      List<Map<String, String>> questions) async {
+    await _firebase.saveSecurityQuestions(questions);
+    clearCache();
+  }
+
+  Future<bool> verifySecurityAnswer(String question, String answer) async {
+    return _firebase.verifySecurityAnswer(question, answer);
+  }
+
+  // ══════════════════════════════════════════════
+  // ACCOUNT MANAGEMENT
+  // ══════════════════════════════════════════════
+
+  Future<Map<String, dynamic>> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    return _firebase.changePassword(
+      oldPassword: oldPassword,
+      newPassword: newPassword,
     );
   }
 
-  /// Update streak - call this when user uses app daily
-  Future<void> updateStreak() async {
-    final profile = await getUserProfile();
-    if (profile == null) return;
-
-    final now = DateTime.now();
-    final lastActive = profile['lastActiveDate'] != null
-        ? DateTime.parse(profile['lastActiveDate'])
-        : null;
-
-    if (lastActive != null) {
-      final daysDifference = now.difference(lastActive).inDays;
-
-      if (daysDifference == 1) {
-        // Consecutive day - increase streak
-        profile['currentStreak'] = (profile['currentStreak'] ?? 0) + 1;
-        print('🔥 Streak increased! Current: ${profile['currentStreak']} days');
-      } else if (daysDifference > 1) {
-        // Missed days - reset streak
-        profile['currentStreak'] = 1;
-        print('🔥 Streak reset to 1');
-      }
-      // If same day (daysDifference == 0), don't change streak
-    } else {
-      // First time
-      profile['currentStreak'] = 1;
-    }
-
-    profile['lastActiveDate'] = now.toIso8601String();
-    await saveUserProfile(profile);
+  Future<Map<String, dynamic>> deleteAccount({required String password}) async {
+    return _firebase.deleteAccount(password: password);
   }
 
-  /// Increment multiple stats at once
-  Future<void> trackActivity({
-    bool accessedResource = false,
-    bool attemptedQuestion = false,
-    int studyMinutes = 0,
-  }) async {
-    if (accessedResource) await trackResourceAccessed();
-    if (attemptedQuestion) await trackQuestionAttempted();
-    if (studyMinutes > 0) await addStudyTime(studyMinutes);
-    await updateStreak(); // Always update streak on activity
+  /// Update profile fields — also syncs display name to Firebase Auth
+  Future<void> updateProfile(Map<String, dynamic> fields) async {
+    await _firebase.updateProfile(fields);
+
+    // Keep Firebase Auth displayName in sync
+    if (fields.containsKey('name') && _auth.currentUser != null) {
+      await _auth.currentUser!.updateDisplayName(fields['name'] as String);
+    }
+
+    clearCache();
   }
 }
