@@ -29,40 +29,57 @@ class CategoryDetailScreen extends StatelessWidget {
     );
   }
 
+  // ── FIX 1: expandedHeight increased to 200 so title + subtitle never get clipped ──
   Widget _buildAppBar(BuildContext context) {
     return SliverAppBar(
-      expandedHeight: 160,
+      expandedHeight: 200,
+      collapsedHeight: 64,
       pinned: true,
       backgroundColor: categoryColor,
       foregroundColor: Colors.white,
+      elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
         onPressed: () => Navigator.pop(context),
       ),
       flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.pin,
         background: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [categoryColor, categoryColor.withValues(alpha: 0.75)],
+              colors: [
+                categoryColor,
+                categoryColor.withValues(alpha: 0.82),
+              ],
             ),
           ),
+          // Use LayoutBuilder so content never overflows the header
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+              padding: const EdgeInsets.fromLTRB(20, 56, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(categoryIcon, style: const TextStyle(fontSize: 36)),
-                  const SizedBox(height: 8),
-                  Text(categoryName,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          fontFamily: 'Ubuntu')),
+                  Text(
+                    categoryIcon,
+                    style: const TextStyle(fontSize: 38),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    categoryName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'Ubuntu',
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Pull fullName from Firestore
                   StreamBuilder<DocumentSnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('categories')
@@ -70,12 +87,18 @@ class CategoryDetailScreen extends StatelessWidget {
                         .snapshots(),
                     builder: (_, snap) {
                       final data = snap.data?.data() as Map<String, dynamic>?;
-                      final fullName = data?['fullName'] ?? '';
-                      return Text(fullName,
-                          style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 13,
-                              fontFamily: 'Ubuntu'));
+                      final fullName = data?['fullName'] as String? ?? '';
+                      return Text(
+                        fullName,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.88),
+                          fontSize: 13,
+                          fontFamily: 'Ubuntu',
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      );
                     },
                   ),
                 ],
@@ -109,8 +132,9 @@ class CategoryDetailScreen extends StatelessWidget {
 
         final docs = snapshot.data!.docs;
 
-        // Group by classType
-        final Map<String, List<QueryDocumentSnapshot>> grouped = {};
+        // Group by classType, preserving insertion order
+        final Map<String, List<QueryDocumentSnapshot>> grouped =
+            <String, List<QueryDocumentSnapshot>>{};
         for (final doc in docs) {
           final data = doc.data() as Map<String, dynamic>;
           final classType = data['classType'] as String? ?? 'Other';
@@ -122,46 +146,17 @@ class CategoryDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Stats row
               _buildStatsRow(docs.length),
               const SizedBox(height: 24),
-              // Job roles grouped
-              ...grouped.entries.map((entry) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Class type header
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: categoryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: categoryColor.withValues(alpha: 0.3)),
-                        ),
-                        child: Text(entry.key,
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: categoryColor,
-                                fontFamily: 'Ubuntu',
-                                letterSpacing: 0.5)),
-                      ),
-                      // Job role cards in this group
-                      ...entry.value.map((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        return _JobRoleCard(
-                          docId: doc.id,
-                          data: data,
-                          categoryId: categoryId,
-                          categoryName: categoryName,
-                          categoryColor: categoryColor,
-                        );
-                      }),
-                      const SizedBox(height: 8),
-                    ],
-                  )),
+              ...grouped.entries.map(
+                (entry) => _GroupSection(
+                  classType: entry.key,
+                  docs: entry.value,
+                  categoryId: categoryId,
+                  categoryName: categoryName,
+                  categoryColor: categoryColor,
+                ),
+              ),
               const SizedBox(height: 32),
             ],
           ),
@@ -192,12 +187,15 @@ class CategoryDetailScreen extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 6),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'Ubuntu')),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Ubuntu',
+            ),
+          ),
         ],
       ),
     );
@@ -213,15 +211,76 @@ class CategoryDetailScreen extends StatelessWidget {
             Icon(Icons.hourglass_empty_rounded,
                 size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text('Content Coming Soon',
-                style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[500],
-                    fontFamily: 'Ubuntu',
-                    fontWeight: FontWeight.w600)),
+            Text(
+              'Content Coming Soon',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[500],
+                fontFamily: 'Ubuntu',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Group section widget (Class I & II header + cards under it) ──
+class _GroupSection extends StatelessWidget {
+  final String classType;
+  final List<QueryDocumentSnapshot> docs;
+  final String categoryId;
+  final String categoryName;
+  final Color categoryColor;
+
+  const _GroupSection({
+    required this.classType,
+    required this.docs,
+    required this.categoryId,
+    required this.categoryName,
+    required this.categoryColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Class type header badge
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: categoryColor.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: categoryColor.withValues(alpha: 0.30)),
+          ),
+          child: Text(
+            classType,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: categoryColor,
+              fontFamily: 'Ubuntu',
+              letterSpacing: 0.4,
+            ),
+          ),
+        ),
+        // Cards
+        ...docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return _JobRoleCard(
+            docId: doc.id,
+            data: data,
+            categoryId: categoryId,
+            categoryName: categoryName,
+            categoryColor: categoryColor,
+          );
+        }),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }
@@ -245,6 +304,8 @@ class _JobRoleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hierarchy = (data['hierarchy'] as List?)?.cast<String>() ?? [];
+    // ── FIX 2: extraCount computed as plain int — no string interpolation issue ──
+    final extraCount = hierarchy.length - 4;
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -264,15 +325,16 @@ class _JobRoleCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4))
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            // ── Card header ──
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -296,17 +358,23 @@ class _JobRoleCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(data['title'] as String? ?? '',
-                            style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: categoryColor,
-                                fontFamily: 'Ubuntu')),
-                        Text(data['shortDescription'] as String? ?? '',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                                fontFamily: 'Ubuntu')),
+                        Text(
+                          data['title'] as String? ?? '',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: categoryColor,
+                            fontFamily: 'Ubuntu',
+                          ),
+                        ),
+                        Text(
+                          data['shortDescription'] as String? ?? '',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontFamily: 'Ubuntu',
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -316,7 +384,7 @@ class _JobRoleCard extends StatelessWidget {
               ),
             ),
 
-            // Salary
+            // ── Salary ──
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Row(
@@ -324,17 +392,22 @@ class _JobRoleCard extends StatelessWidget {
                   Icon(Icons.currency_rupee_rounded,
                       size: 14, color: Colors.green[700]),
                   const SizedBox(width: 4),
-                  Text(data['salary'] as String? ?? '',
+                  Expanded(
+                    child: Text(
+                      data['salary'] as String? ?? '',
                       style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green[700],
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'Ubuntu')),
+                        fontSize: 12,
+                        color: Colors.green[700],
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Ubuntu',
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
 
-            // Eligibility
+            // ── Eligibility ──
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
               child: Row(
@@ -343,53 +416,68 @@ class _JobRoleCard extends StatelessWidget {
                   Icon(Icons.school_rounded, size: 14, color: Colors.blue[600]),
                   const SizedBox(width: 4),
                   Expanded(
-                    child: Text(data['eligibility'] as String? ?? '',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[600],
-                            fontFamily: 'Ubuntu'),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      data['eligibility'] as String? ?? '',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                        fontFamily: 'Ubuntu',
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // Top hierarchy posts preview
+            // ── Hierarchy chips preview ──
             if (hierarchy.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
                 child: Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    ...hierarchy.take(4).map((post) => Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: categoryColor.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(post,
+                    // Show first 4 posts as chips
+                    ...hierarchy.take(4).map(
+                          (post) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: categoryColor.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              post,
                               style: TextStyle(
-                                  fontSize: 10,
-                                  color: categoryColor,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'Ubuntu')),
-                        )),
-                    if (hierarchy.length > 4)
+                                fontSize: 10,
+                                color: categoryColor,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Ubuntu',
+                              ),
+                            ),
+                          ),
+                        ),
+                    // ── FIX 2: +N more chip — correct Dart interpolation ──
+                    if (extraCount > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.grey.shade300),
                         ),
-                        child: Text('+\${hierarchy.length - 4} more',
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[500],
-                                fontFamily: 'Ubuntu')),
+                        child: Text(
+                          '+$extraCount more',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[600],
+                            fontFamily: 'Ubuntu',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                   ],
                 ),
