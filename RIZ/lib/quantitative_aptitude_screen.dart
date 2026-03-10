@@ -28,7 +28,6 @@ class _QuantitativeAptitudeScreenState
     if (_selectedDifficulty != 'All') {
       query = query.where('difficulty', isEqualTo: _selectedDifficulty);
     }
-    query = query.limit(50);
     setState(() => _questionsFuture = query.get());
   }
 

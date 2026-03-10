@@ -26,7 +26,6 @@ class _GeneralKnowledgeScreenState extends State<GeneralKnowledgeScreen> {
     if (_selectedDifficulty != 'All') {
       query = query.where('difficulty', isEqualTo: _selectedDifficulty);
     }
-    query = query.limit(50);
     setState(() => _questionsFuture = query.get());
   }
 

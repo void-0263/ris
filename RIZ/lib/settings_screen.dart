@@ -725,43 +725,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ✅ UPDATED: Privacy Policy with GitHub Pages URL
   Future<void> _launchPrivacyPolicy() async {
-    final url = Uri.parse('https://rizlearninghub.com/privacy');
+    final url = Uri.parse(
+        'https://void-0263.github.io/rizlearninghub-website/privacy.html');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Privacy Policy coming soon',
-                style: TextStyle(fontFamily: 'Ubuntu'))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open Privacy Policy',
+                style: TextStyle(fontFamily: 'Ubuntu')),
+          ),
+        );
       }
     }
   }
 
+  // ✅ UPDATED: Terms of Service with GitHub Pages URL
   Future<void> _launchTermsOfService() async {
-    final url = Uri.parse('https://rizlearninghub.com/terms');
+    final url = Uri.parse(
+        'https://void-0263.github.io/rizlearninghub-website/terms.html');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Terms of Service coming soon',
-                style: TextStyle(fontFamily: 'Ubuntu'))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open Terms of Service',
+                style: TextStyle(fontFamily: 'Ubuntu')),
+          ),
+        );
       }
     }
   }
 
+  // ✅ UPDATED: Support email with rizlearning@gmail.com
   Future<void> _launchSupport() async {
-    final url =
-        Uri.parse('mailto:support@rizlearninghub.com?subject=Support Request');
+    final url = Uri.parse(
+        'mailto:rizlearning0263@gmail.com?subject=RIZ Learning Hub - Support Request');
     if (await canLaunchUrl(url)) {
       await launchUrl(url);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Email: support@rizlearninghub.com',
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email: rizlearning0263@gmail.com',
                 style: TextStyle(fontFamily: 'Ubuntu')),
-            duration: Duration(seconds: 3)));
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
