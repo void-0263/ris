@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'mock_test_screen.dart';
 
+// ════════════════════════════════════════════════════
+//  MockTestsHomeScreen — Browse and filter mock tests
+
 class MockTestsHomeScreen extends StatefulWidget {
   const MockTestsHomeScreen({super.key});
 

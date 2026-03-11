@@ -65,7 +65,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ✅ THE FIX: updates appThemeNotifier so MaterialApp rebuilds immediately
+  // ✅ THE FIX: updates appThemeNotifier so MaterialApp rebuilds immediately with the new theme
   void _applyTheme(String theme) {
     switch (theme) {
       case 'Light':

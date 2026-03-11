@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'profile_screen.dart';
 
-// ═══════════════════════════════════════════════════════════
 // AUTH GATE
 // Listens to Firebase Auth state stream.
 // • If user is already logged in  → goes straight to ProfileScreen

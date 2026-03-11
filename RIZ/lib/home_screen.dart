@@ -60,6 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Good Night 🌙';
   }
 
+// ═══════════════════════════════════════════════════════════
+// HomeScreen — Dashboard with stats, quick actions, categories, and upcoming exams
   @override
   Widget build(BuildContext context) {
     return Scaffold(

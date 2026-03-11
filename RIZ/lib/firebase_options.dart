@@ -48,6 +48,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '740856985219', // Example: '123456789012'
     projectId: 'riz-learing', // Example: 'riz-learning-hub'
     storageBucket:
-        'riz-learing.firebasestorage.app', // Example: 'riz-learning-hub.appspot.com'
+        'riz-learing.firebasestorage.app', // Example: 'riz-learning-hub.appspot.com
   );
 }

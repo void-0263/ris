@@ -459,7 +459,7 @@ class _JobRoleCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                    // ── FIX 2: +N more chip — correct Dart interpolation ──
+                    // ── FIX 2: +N more chip — correct Dart interpolation
                     if (extraCount > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(

@@ -37,7 +37,7 @@ class _LoadingScreenState extends State<LoadingScreen>
     )..repeat();
 
     // ✅ FIX: Stop all controllers BEFORE calling onLoadingComplete
-    // so they don't keep painting after the screen is gone
+    // so they don't keep painting after the screen is dismissed, which can cause memory leaks and performance issues.
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         _outerController.stop();

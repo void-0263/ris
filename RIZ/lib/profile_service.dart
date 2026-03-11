@@ -180,7 +180,7 @@ class ProfileService {
   Future<void> updateProfile(Map<String, dynamic> fields) async {
     await _firebase.updateProfile(fields);
 
-    // Keep Firebase Auth displayName in sync
+    // Keep Firebase Auth displayName in sync with our profile 'name' field for consistency across the app
     if (fields.containsKey('name') && _auth.currentUser != null) {
       await _auth.currentUser!.updateDisplayName(fields['name'] as String);
     }

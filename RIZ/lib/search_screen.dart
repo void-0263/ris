@@ -721,7 +721,7 @@ class _ResultTile extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
+// ──────────────────────────────────────────
 enum _Type { category, resource, feature, topic }
 
 class _SearchItem {

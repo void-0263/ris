@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 
 class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
@@ -9,6 +13,12 @@ class HelpScreen extends StatefulWidget {
 
 class _HelpScreenState extends State<HelpScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _bugReportController = TextEditingController();
+  final TextEditingController _supportMessageController =
+      TextEditingController();
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
   String _searchQuery = '';
   int? _expandedIndex;
 
@@ -63,6 +73,56 @@ class _HelpScreenState extends State<HelpScreen> {
       'a':
           'Try closing and reopening the app. Make sure you have a stable internet connection. If the issue persists, clear the cache from Settings → Clear Cache.',
     },
+    {
+      'q': 'How do I take a Mock Test?',
+      'a':
+          'Navigate to PYQ\'s from the home screen, select your exam (TNPSC, UPSC, SSC, etc.), and tap on any available mock test. The test will simulate real exam conditions with a timer and negative marking.',
+    },
+    {
+      'q': 'Can I pause a mock test and resume later?',
+      'a':
+          'No, mock tests are designed to simulate real exam conditions. Once started, you must complete the test within the time limit. However, you can exit and lose your progress if needed.',
+    },
+    {
+      'q': 'How do I change my app language?',
+      'a':
+          'Go to Settings → Study Preferences → App Language. Select from English, Tamil, Hindi, Telugu, Kannada, or Malayalam.',
+    },
+    {
+      'q': 'How do I switch between Light and Dark theme?',
+      'a':
+          'Go to Settings → Appearance → Theme. Choose from System Default, Light, or Dark mode.',
+    },
+    {
+      'q': 'What does "Clear Cache" do?',
+      'a':
+          'Clearing cache removes temporarily stored data to free up space and fix any loading issues. Your profile, study progress, and settings will not be affected.',
+    },
+    {
+      'q': 'How do I reset my password?',
+      'a':
+          'On the login screen, tap "Forgot Password", enter your registered email, and follow the instructions sent to your inbox.',
+    },
+    {
+      'q': 'Can I access the app offline?',
+      'a':
+          'Some features like viewing downloaded study materials work offline, but Current Affairs, Mock Tests, and syncing require an internet connection.',
+    },
+    {
+      'q': 'How do I bookmark study materials?',
+      'a':
+          'Open any study link from the Study Vault, and tap the bookmark icon at the top. All bookmarked materials can be accessed from "My Bookmarks".',
+    },
+    {
+      'q': 'What are the app\'s system requirements?',
+      'a':
+          'RIZ Learning Hub works on Android 5.0 (Lollipop) or later, and iOS 12.0 or later. A stable internet connection is recommended for best experience.',
+    },
+    {
+      'q': 'How do I contact support for technical issues?',
+      'a':
+          'Tap "Email Us" from Quick Actions on this screen, or send an email to rizlearning0263@gmail.com. Our team responds within 24 hours.',
+    },
   ];
 
   List<Map<String, String>> get _filteredFaqs {
@@ -79,6 +139,8 @@ class _HelpScreenState extends State<HelpScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _bugReportController.dispose();
+    _supportMessageController.dispose();
     super.dispose();
   }
 
@@ -242,7 +304,7 @@ class _HelpScreenState extends State<HelpScreen> {
                           icon: Icons.telegram_rounded,
                           label: 'Telegram',
                           color: Colors.lightBlue,
-                          onTap: () => _showTelegramDialog(),
+                          onTap: () => _launchTelegram(),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -487,6 +549,7 @@ class _HelpScreenState extends State<HelpScreen> {
     );
   }
 
+  // ✅ UPDATED: Contact Support with TWO options
   void _showContactDialog() {
     showModalBottomSheet(
       context: context,
@@ -525,16 +588,39 @@ class _HelpScreenState extends State<HelpScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              'support@rizhub.com',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[500],
-                fontFamily: 'Ubuntu',
-              ),
+            Row(
+              children: [
+                const Text(
+                  'rizlearning0263@gmail.com',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey,
+                    fontFamily: 'Ubuntu',
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.copy,
+                      size: 18, color: Color(0xFF2196F3)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    Clipboard.setData(
+                        const ClipboardData(text: 'rizlearning0263@gmail.com'));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Email copied to clipboard ✅',
+                            style: TextStyle(fontFamily: 'Ubuntu')),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             TextField(
+              controller: _supportMessageController,
               decoration: InputDecoration(
                 hintText: 'Describe your issue...',
                 hintStyle: TextStyle(
@@ -553,37 +639,52 @@ class _HelpScreenState extends State<HelpScreen> {
               style: const TextStyle(fontFamily: 'Ubuntu'),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Message sent! We\'ll get back to you soon ✅',
-                        style: TextStyle(fontFamily: 'Ubuntu'),
-                      ),
-                      backgroundColor: Colors.green,
+
+            // ✅ TWO BUTTONS: Submit to Firestore + Open Email App
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openEmailApp('Support Request'),
+                    icon: const Icon(Icons.email_outlined, size: 18),
+                    label: const Text(
+                      'Open Email',
+                      style: TextStyle(fontFamily: 'Ubuntu'),
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2196F3),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF2196F3),
+                      side: const BorderSide(color: Color(0xFF2196F3)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
-                child: const Text(
-                  'Send Message',
-                  style: TextStyle(
-                    fontFamily: 'Ubuntu',
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _submitSupportMessage(),
+                    icon: const Icon(Icons.send_rounded,
+                        size: 18, color: Colors.white),
+                    label: const Text(
+                      'Submit',
+                      style: TextStyle(
+                        fontFamily: 'Ubuntu',
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2196F3),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -591,36 +692,39 @@ class _HelpScreenState extends State<HelpScreen> {
     );
   }
 
-  void _showTelegramDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text(
-          'Join Telegram',
-          style: TextStyle(fontFamily: 'Ubuntu', fontWeight: FontWeight.w700),
-        ),
-        content: const Text(
-          'Join our Telegram community for live updates, discussion, and support.\n\nt.me/rizhub',
-          style: TextStyle(fontFamily: 'Ubuntu'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(fontFamily: 'Ubuntu')),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.lightBlue),
-            child: const Text(
-              'Open Telegram',
-              style: TextStyle(fontFamily: 'Ubuntu', color: Colors.white),
+  // ✅ FUNCTIONAL: Launch Telegram
+  Future<void> _launchTelegram() async {
+    final url = Uri.parse('https://t.me/rizhub0263');
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Could not open Telegram. Join at: t.me/rizhub0263',
+                style: TextStyle(fontFamily: 'Ubuntu'),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not open Telegram. Visit: t.me/rizhub0263',
+              style: TextStyle(fontFamily: 'Ubuntu'),
             ),
           ),
-        ],
-      ),
-    );
+        );
+      }
+    }
   }
 
+  // ✅ UPDATED: Bug Report Dialog with TWO options
   void _showBugReportDialog() {
     showModalBottomSheet(
       context: context,
@@ -658,8 +762,39 @@ class _HelpScreenState extends State<HelpScreen> {
                 fontFamily: 'Ubuntu',
               ),
             ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  'rizlearning0263@gmail.com',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[500],
+                    fontFamily: 'Ubuntu',
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 18, color: Colors.orange),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    Clipboard.setData(
+                        const ClipboardData(text: 'rizlearning0263@gmail.com'));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Email copied ✅',
+                            style: TextStyle(fontFamily: 'Ubuntu')),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             TextField(
+              controller: _bugReportController,
               decoration: InputDecoration(
                 hintText: 'What happened? What did you expect?',
                 hintStyle: TextStyle(
@@ -678,42 +813,311 @@ class _HelpScreenState extends State<HelpScreen> {
               style: const TextStyle(fontFamily: 'Ubuntu'),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Bug report submitted! Thank you 🙏',
-                        style: TextStyle(fontFamily: 'Ubuntu'),
-                      ),
-                      backgroundColor: Colors.green,
+
+            // ✅ TWO BUTTONS: Submit to Firestore + Open Email App
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openEmailApp('Bug Report'),
+                    icon: const Icon(Icons.email_outlined, size: 18),
+                    label: const Text(
+                      'Open Email',
+                      style: TextStyle(fontFamily: 'Ubuntu'),
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                      side: const BorderSide(color: Colors.orange),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
-                child: const Text(
-                  'Submit Report',
-                  style: TextStyle(
-                    fontFamily: 'Ubuntu',
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _submitBugReport(),
+                    icon: const Icon(Icons.send_rounded,
+                        size: 18, color: Colors.white),
+                    label: const Text(
+                      'Submit',
+                      style: TextStyle(
+                        fontFamily: 'Ubuntu',
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  // ✅ FIXED: Open Email App with pre-filled message
+  Future<void> _openEmailApp(String type) async {
+    String body = '';
+
+    if (type == 'Bug Report') {
+      body = _bugReportController.text.trim();
+    } else {
+      body = _supportMessageController.text.trim();
+    }
+
+    if (body.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please write a message first',
+              style: TextStyle(fontFamily: 'Ubuntu'),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Create proper mailto URL
+    final String emailAddress = 'rizlearning0263@gmail.com';
+    final String subject = Uri.encodeComponent('RIZ Learning Hub - $type');
+    final String emailBody = Uri.encodeComponent(body);
+
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: emailAddress,
+      query: 'subject=$subject&body=$emailBody',
+    );
+
+    try {
+      final bool canLaunch = await canLaunchUrl(emailUri);
+
+      if (canLaunch) {
+        final bool launched = await launchUrl(
+          emailUri,
+          mode: LaunchMode.externalApplication,
+        );
+
+        if (launched && mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Email app opened. Please send the email ✅',
+                style: TextStyle(fontFamily: 'Ubuntu'),
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Could not open email app. Email: rizlearning0263@gmail.com',
+                style: TextStyle(fontFamily: 'Ubuntu'),
+              ),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'Copy',
+                textColor: Colors.white,
+                onPressed: () {
+                  Clipboard.setData(
+                      const ClipboardData(text: 'rizlearning0263@gmail.com'));
+                },
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error launching email: $e');
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Could not open email app. Email: rizlearning0263@gmail.com',
+              style: TextStyle(fontFamily: 'Ubuntu'),
+            ),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Copy',
+              textColor: Colors.white,
+              onPressed: () {
+                Clipboard.setData(
+                    const ClipboardData(text: 'rizlearning0263@gmail.com'));
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  // ✅ UPDATED: Submit Support Message (Firestore only)
+  Future<void> _submitSupportMessage() async {
+    if (_supportMessageController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please describe your issue',
+              style: TextStyle(fontFamily: 'Ubuntu')),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF2196F3)),
+        ),
+      );
+
+      // Get user info
+      final user = _auth.currentUser;
+      final userId = user?.uid ?? 'anonymous';
+      final userEmail = user?.email ?? 'No email';
+
+      // Save to Firestore
+      await _db.collection('supportMessages').add({
+        'userId': userId,
+        'userEmail': userEmail,
+        'message': _supportMessageController.text.trim(),
+        'type': 'support',
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+        'resolved': false,
+      });
+
+      _supportMessageController.clear();
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        Navigator.pop(context); // Close bottom sheet
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Message submitted successfully! We\'ll respond soon ✅',
+              style: TextStyle(fontFamily: 'Ubuntu'),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error submitting support message: $e');
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Error submitting. Please use "Open Email" button instead.',
+              style: TextStyle(fontFamily: 'Ubuntu'),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ✅ UPDATED: Submit Bug Report (Firestore only)
+  Future<void> _submitBugReport() async {
+    if (_bugReportController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please describe the bug',
+              style: TextStyle(fontFamily: 'Ubuntu')),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: CircularProgressIndicator(color: Colors.orange),
+        ),
+      );
+
+      // Get user info
+      final user = _auth.currentUser;
+      final userId = user?.uid ?? 'anonymous';
+      final userEmail = user?.email ?? 'No email';
+
+      // Save to Firestore
+      await _db.collection('bugReports').add({
+        'userId': userId,
+        'userEmail': userEmail,
+        'description': _bugReportController.text.trim(),
+        'status': 'open',
+        'priority': 'medium',
+        'createdAt': FieldValue.serverTimestamp(),
+        'resolved': false,
+        'device': 'mobile',
+      });
+
+      _bugReportController.clear();
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        Navigator.pop(context); // Close bottom sheet
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Bug report submitted! Thank you for helping us improve 🙏',
+              style: TextStyle(fontFamily: 'Ubuntu'),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error submitting bug report: $e');
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Error submitting. Please use "Open Email" button instead.',
+              style: TextStyle(fontFamily: 'Ubuntu'),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 

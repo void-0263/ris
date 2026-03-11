@@ -740,6 +740,7 @@ class _DashedCirclePainter extends CustomPainter {
     }
   }
 
+// We should repaint if radius or color changes, but since these are final and set once, we can return false to avoid unnecessary repaints.
   @override
   bool shouldRepaint(_DashedCirclePainter old) =>
       old.radius != radius || old.color != color;

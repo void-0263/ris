@@ -677,7 +677,6 @@ class _SyllabusExpansionState extends State<_SyllabusExpansion> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Study Link Tile
 // ─────────────────────────────────────────────────────────────
 class _StudyLinkTile extends StatelessWidget {
   final Map<String, dynamic> data;

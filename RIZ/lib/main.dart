@@ -22,7 +22,7 @@ import 'search_screen.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
-// ── Global theme notifier ─────────────────────────────────
+// ── Global theme notifier ───────────────────────────────
 // Default: Light (not System) as requested
 final ValueNotifier<ThemeMode> appThemeNotifier =
     ValueNotifier<ThemeMode>(ThemeMode.light);

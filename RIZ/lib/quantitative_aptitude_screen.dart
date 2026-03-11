@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:math';
 import 'profile_service.dart';
 
 class QuantitativeAptitudeScreen extends StatefulWidget {
@@ -379,6 +380,30 @@ class QuestionCardState extends State<QuestionCard> {
   int? _selectedOption;
   bool _showExplanation = false;
 
+  // ── Shuffle state ──────────────────────────────────────
+  late List<String> _shuffledOptions;
+  late int _shuffledCorrectIndex;
+  // ──────────────────────────────────────────────────────
+
+  @override
+  void initState() {
+    super.initState();
+    _prepareOptions();
+  }
+
+  // ── Shuffle options once and remap correct answer index ─
+  void _prepareOptions() {
+    final original = (widget.data['options'] as List).cast<String>();
+    final correctAnswer = (widget.data['answer'] as num).toInt();
+    final correctText = original[correctAnswer];
+
+    final shuffled = List<String>.from(original)..shuffle(Random());
+
+    _shuffledOptions = shuffled;
+    _shuffledCorrectIndex = shuffled.indexOf(correctText);
+  }
+  // ──────────────────────────────────────────────────────
+
   void _selectOption(int index) {
     if (_selectedOption != null) return;
     setState(() {
@@ -392,15 +417,15 @@ class QuestionCardState extends State<QuestionCard> {
         .doc(widget.docId)
         .update({
       'timesAttempted': FieldValue.increment(1),
-      if (index == (widget.data['answer'] as num).toInt())
+      if (index == _shuffledCorrectIndex)
         'correctAttempts': FieldValue.increment(1),
     }).catchError((_) {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final options = (widget.data['options'] as List).cast<String>();
-    final correctAnswer = (widget.data['answer'] as num).toInt();
+    final options = _shuffledOptions;
+    final correctAnswer = _shuffledCorrectIndex;
     final difficulty = widget.data['difficulty'] as String? ?? 'medium';
     final topic = widget.data['topic'] as String? ?? '';
     final explanation = widget.data['explanation'] as String? ?? '';

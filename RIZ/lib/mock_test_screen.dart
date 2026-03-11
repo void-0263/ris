@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 
-// ═══════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════
 //  MockTestScreen — Full test-taking experience
 // ═══════════════════════════════════════════════════════
 class MockTestScreen extends StatefulWidget {

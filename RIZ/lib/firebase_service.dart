@@ -349,7 +349,7 @@ class FirebaseService {
 
     try {
       // ✅ FIXED: set+merge instead of update()
-      // update() throws if the document or field doesn't exist yet
+      // update() throws if the document or field doesn't exist, but set() with merge:true will create it if missing
       await _db.collection('users').doc(_uid).set({
         key: value,
         'updatedAt': FieldValue.serverTimestamp(),

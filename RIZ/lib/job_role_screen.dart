@@ -6,7 +6,7 @@ class JobRoleScreen extends StatelessWidget {
   final String categoryId;
   final String jobRoleId;
   final Color categoryColor;
-
+// Displays details about a specific job role, including description,
   const JobRoleScreen({
     super.key,
     required this.categoryId,

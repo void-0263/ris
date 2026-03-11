@@ -6,7 +6,7 @@ import 'firebase_service.dart';
 import 'profile_service.dart';
 import 'login_screen.dart'; // for post-logout navigation
 
-// ─────────────────────────────────────────────
+// ──────────────────────────────────────────
 // Profile Screen
 // ─────────────────────────────────────────────
 class ProfileScreen extends StatefulWidget {

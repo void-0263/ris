@@ -101,7 +101,7 @@ class CategoriesSection extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────
 class _CategoryCard extends StatelessWidget {
   final String categoryId;
   final String name;
