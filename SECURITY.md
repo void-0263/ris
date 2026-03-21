@@ -4,16 +4,17 @@
 
 We provide security updates for the following versions:
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.1   | :white_check_mark: |
-| < 1.0   | :x:                |
+|    Version    | Supported  |
+|    -------    | ---------- |
+|1.0.0 (Build 1)| Android 8+ |
 
 ---
 
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in RIZ Learning Hub, please report it responsibly.
+
+You can use the below details on how to report the errors accordingly.
 
 ### How to Report
 
@@ -75,4 +76,4 @@ We'll acknowledge your contribution in our release notes (with your permission) 
 
 ---
 
-*Last Updated: March 11, 2026*
+*Last Updated: March 21, 2026*
