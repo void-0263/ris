@@ -677,7 +677,6 @@ class _SyllabusExpansionState extends State<_SyllabusExpansion> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
 class _StudyLinkTile extends StatelessWidget {
   final Map<String, dynamic> data;
   final Color color;

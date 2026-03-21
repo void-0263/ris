@@ -662,3 +662,4 @@ class GKQuestionCardState extends State<GKQuestionCard> {
     );
   }
 }
+// ─────────────────────────────────────────────────────────

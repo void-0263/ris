@@ -37,9 +37,7 @@ Future<void> _backgroundMessageHandler(RemoteMessage message) async {
   debugPrint('📱 Background message: ${message.messageId}');
 }
 
-// ─────────────────────────────────────────────
 // main()
-// ─────────────────────────────────────────────
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -64,6 +62,8 @@ void main() async {
   }
 
   FirebaseMessaging.onBackgroundMessage(_backgroundMessageHandler);
+
+  // Request notification permissions and get FCM token
 
   try {
     await FirebaseMessaging.instance

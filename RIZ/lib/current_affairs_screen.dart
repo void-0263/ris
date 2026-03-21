@@ -319,7 +319,7 @@ class _CurrentAffairsScreenState extends State<CurrentAffairsScreen> {
     );
   }
 
-  // ✅ FIXED: Dark theme support for article detail model
+  // ✅FIXED: Dark theme support for article detail model
   void _showArticleDetail(Map<String, dynamic> article) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

@@ -1,5 +1,5 @@
 // feature_screens.dart
-// ─────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────
 // Central barrel file — exports all 4 feature screens.
 // Do NOT define any widget classes here; each screen
 // lives in its own file to avoid duplicate-class errors.

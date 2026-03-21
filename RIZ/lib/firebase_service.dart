@@ -357,7 +357,7 @@ class FirebaseService {
       debugPrint('✅ Setting saved: $key = $value');
     } catch (e) {
       debugPrint('❌ Error updating setting "$key": $e');
-      rethrow; // ✅ bubble up so settings_screen can show error snackbar
+      rethrow; // ✅ bubble up so settings_screen can show error s
     }
   }
 

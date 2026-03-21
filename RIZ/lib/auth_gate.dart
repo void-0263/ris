@@ -10,7 +10,7 @@ import 'profile_screen.dart';
 //
 // Use this wherever you currently push to ProfileScreen or
 // show LoginSignupScreen — it handles both cases automatically.
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});

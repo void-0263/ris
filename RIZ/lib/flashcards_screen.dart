@@ -5,7 +5,7 @@ import 'dart:math';
 
 // ════════════════════════════════════
 //  DigitalFlashcardsScreen — Browse + Review
-// ═══════════════════════════════════════════════════════
+// ═════════════════════════════════════
 class DigitalFlashcardsScreen extends StatefulWidget {
   const DigitalFlashcardsScreen({super.key});
 
