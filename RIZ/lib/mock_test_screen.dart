@@ -26,8 +26,8 @@ class _MockTestScreenState extends State<MockTestScreen> {
   // ── State ──
   List<Map<String, dynamic>> _questions = [];
   int _currentIndex = 0;
-  Map<int, int> _answers = {}; // questionIndex → selectedOption
-  Map<int, bool> _marked = {}; // questionIndex → marked for review
+  final Map<int, int> _answers = {}; // questionIndex → selectedOption
+  final Map<int, bool> _marked = {}; // questionIndex → marked for review
   bool _isLoading = true;
   bool _isSubmitted = false;
 
@@ -354,9 +354,9 @@ class _MockTestScreenState extends State<MockTestScreen> {
         alignment: Alignment.centerLeft,
         widthFactor: progress,
         child: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-                colors: [Colors.blue, Colors.lightBlueAccent]),
+          decoration: const BoxDecoration(
+            gradient:
+                LinearGradient(colors: [Colors.blue, Colors.lightBlueAccent]),
           ),
         ),
       ),
@@ -615,9 +615,9 @@ class _MockTestScreenState extends State<MockTestScreen> {
                   final isCurrent = i == _currentIndex;
 
                   Color bg;
-                  if (isCurrent)
+                  if (isCurrent) {
                     bg = Colors.blue;
-                  else if (isMarkedQ)
+                  } else if (isMarkedQ)
                     bg = Colors.orange;
                   else if (isAnswered)
                     bg = Colors.green;
@@ -998,9 +998,9 @@ class _MockTestResultScreenState extends State<MockTestResultScreen>
         final isSkipped = !widget.answers.containsKey(i);
 
         Color headerColor;
-        if (isSkipped)
+        if (isSkipped) {
           headerColor = Colors.grey;
-        else if (isCorrect)
+        } else if (isCorrect)
           headerColor = Colors.green;
         else
           headerColor = Colors.red;

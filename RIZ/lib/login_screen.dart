@@ -43,14 +43,14 @@ class _LoginScreenState extends State<LoginScreen>
 
   // Exam badges shown orbiting
   final List<_ExamBadge> _badges = [
-    _ExamBadge('TNPSC', '🏛️', Color(0xFF1565C0)),
-    _ExamBadge('UPSC', '🇮🇳', Color(0xFF0D47A1)),
-    _ExamBadge('SSC', '📋', Color(0xFF1976D2)),
-    _ExamBadge('Bank', '🏦', Color(0xFF1E88E5)),
-    _ExamBadge('Rail', '🚂', Color(0xFF2196F3)),
-    _ExamBadge('Def', '⭐', Color(0xFF42A5F5)),
-    _ExamBadge('GK', '🌍', Color(0xFF1565C0)),
-    _ExamBadge('Apt', '🧮', Color(0xFF1976D2)),
+    const _ExamBadge('TNPSC', '🏛️', Color(0xFF1565C0)),
+    const _ExamBadge('UPSC', '🇮🇳', Color(0xFF0D47A1)),
+    const _ExamBadge('SSC', '📋', Color(0xFF1976D2)),
+    const _ExamBadge('Bank', '🏦', Color(0xFF1E88E5)),
+    const _ExamBadge('Rail', '🚂', Color(0xFF2196F3)),
+    const _ExamBadge('Def', '⭐', Color(0xFF42A5F5)),
+    const _ExamBadge('GK', '🌍', Color(0xFF1565C0)),
+    const _ExamBadge('Apt', '🧮', Color(0xFF1976D2)),
   ];
 
   @override

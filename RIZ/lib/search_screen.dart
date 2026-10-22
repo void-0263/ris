@@ -279,160 +279,160 @@ class _SearchResults extends StatelessWidget {
 
   static final List<_SearchItem> _allItems = [
     // ── Main categories ──
-    _SearchItem(
+    const _SearchItem(
         title: 'TNPSC',
         subtitle: 'Tamil Nadu Public Service Commission',
         category: 'Exam Category',
         icon: '🏛️',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'UPSC',
         subtitle: 'Union Public Service Commission',
         category: 'Exam Category',
         icon: '🇮🇳',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'SSC',
         subtitle: 'Staff Selection Commission',
         category: 'Exam Category',
         icon: '📝',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'Banking',
         subtitle: 'IBPS PO, SBI PO, Clerk, RBI',
         category: 'Exam Category',
         icon: '🏦',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'Railways',
         subtitle: 'RRB NTPC, Group D',
         category: 'Exam Category',
         icon: '🚂',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'Defence',
         subtitle: 'NDA, CDS, AFCAT',
         category: 'Exam Category',
         icon: '⚔️',
         type: _Type.category),
     // ── TNPSC job roles ──
-    _SearchItem(
+    const _SearchItem(
         title: 'Group 1',
         subtitle: 'Deputy Collector, DSP, Joint Registrar',
         category: 'TNPSC',
         icon: '🏛️',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'Group 2',
         subtitle: 'Sub-Registrar, Revenue Inspector',
         category: 'TNPSC',
         icon: '🏛️',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'Group 4 / VAO',
         subtitle: 'Village Administrative Officer',
         category: 'TNPSC',
         icon: '🏛️',
         type: _Type.category),
     // ── UPSC job roles ──
-    _SearchItem(
+    const _SearchItem(
         title: 'Civil Services (IAS/IPS)',
         subtitle: 'IAS, IPS, IFS — 24 Central Services',
         category: 'UPSC',
         icon: '🇮🇳',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'CAPF AC',
         subtitle: 'BSF, CRPF, CISF, ITBP, SSB Officer',
         category: 'UPSC',
         icon: '🇮🇳',
         type: _Type.category),
     // ── SSC job roles ──
-    _SearchItem(
+    const _SearchItem(
         title: 'CGL',
         subtitle: 'Income Tax Inspector, Auditor, CSS',
         category: 'SSC',
         icon: '📝',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'CHSL',
         subtitle: 'LDC, JSA, Postal Assistant, DEO',
         category: 'SSC',
         icon: '📝',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'MTS',
         subtitle: 'Multi Tasking Staff, Havaldar',
         category: 'SSC',
         icon: '📝',
         type: _Type.category),
     // ── Banking job roles ──
-    _SearchItem(
+    const _SearchItem(
         title: 'IBPS PO',
         subtitle: 'Probationary Officer — 19 Banks',
         category: 'Banking',
         icon: '🏦',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'SBI PO',
         subtitle: 'State Bank of India PO',
         category: 'Banking',
         icon: '🏦',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'IBPS Clerk',
         subtitle: 'Junior Associate — 19 Banks',
         category: 'Banking',
         icon: '🏦',
         type: _Type.category),
     // ── Railways job roles ──
-    _SearchItem(
+    const _SearchItem(
         title: 'RRB NTPC',
         subtitle: 'Station Master, Guard, ASM, Clerk',
         category: 'Railways',
         icon: '🚂',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'RRC Group D',
         subtitle: 'Track Maintainer, Helper, Porter',
         category: 'Railways',
         icon: '🚂',
         type: _Type.category),
     // ── Defence job roles ──
-    _SearchItem(
+    const _SearchItem(
         title: 'NDA',
         subtitle: 'Army, Navy, Air Force after 12th',
         category: 'Defence',
         icon: '⚔️',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'CDS',
         subtitle: 'IMA, OTA, Naval Academy, Air Force',
         category: 'Defence',
         icon: '⚔️',
         type: _Type.category),
-    _SearchItem(
+    const _SearchItem(
         title: 'AFCAT',
         subtitle: 'Flying, Technical & Ground Duty (AF)',
         category: 'Defence',
         icon: '⚔️',
         type: _Type.category),
     // ── Study resources ──
-    _SearchItem(
+    const _SearchItem(
         title: 'Current Affairs',
         subtitle: 'Updated daily with latest events',
         category: 'Study Resource',
         iconData: Icons.article_rounded,
         color: Color(0xFF2196F3),
         type: _Type.resource),
-    _SearchItem(
+    const _SearchItem(
         title: 'Quantitative Aptitude',
         subtitle: 'Complete guide with shortcuts',
         category: 'Study Resource',
         iconData: Icons.calculate_rounded,
         color: Color(0xFF7B1FA2),
         type: _Type.resource),
-    _SearchItem(
+    const _SearchItem(
         title: 'General Knowledge',
         subtitle: 'Comprehensive GK database',
         category: 'Study Resource',
@@ -440,21 +440,21 @@ class _SearchResults extends StatelessWidget {
         color: Color(0xFFE65100),
         type: _Type.resource),
     // ── Features ──
-    _SearchItem(
+    const _SearchItem(
         title: 'Digital Flashcards',
         subtitle: 'Smart adaptive learning',
         category: 'Feature',
         iconData: Icons.auto_awesome_rounded,
         color: Color(0xFF7B1FA2),
         type: _Type.feature),
-    _SearchItem(
+    const _SearchItem(
         title: "PYQ's",
         subtitle: 'Previous Year Questions',
         category: 'Feature',
         iconData: Icons.history_edu_rounded,
         color: Color(0xFF2196F3),
         type: _Type.feature),
-    _SearchItem(
+    const _SearchItem(
         title: 'Study Links',
         subtitle: 'Organised study materials vault',
         category: 'Feature',
@@ -462,42 +462,42 @@ class _SearchResults extends StatelessWidget {
         color: Color(0xFFE65100),
         type: _Type.feature),
     // ── Topics ──
-    _SearchItem(
+    const _SearchItem(
         title: 'General Studies',
         subtitle: 'History, Geography, Polity, Economy',
         category: 'Subject',
         iconData: Icons.menu_book_rounded,
         color: Color(0xFF388E3C),
         type: _Type.topic),
-    _SearchItem(
+    const _SearchItem(
         title: 'Aptitude & Reasoning',
         subtitle: 'Quant, logical reasoning, DI',
         category: 'Subject',
         iconData: Icons.psychology_rounded,
         color: Color(0xFF388E3C),
         type: _Type.topic),
-    _SearchItem(
+    const _SearchItem(
         title: 'English Language',
         subtitle: 'Grammar, comprehension, vocabulary',
         category: 'Subject',
         iconData: Icons.translate_rounded,
         color: Color(0xFF388E3C),
         type: _Type.topic),
-    _SearchItem(
+    const _SearchItem(
         title: 'Preliminary Exam',
         subtitle: 'Objective type — first stage',
         category: 'Exam Stage',
         iconData: Icons.assignment_rounded,
         color: Color(0xFF1976D2),
         type: _Type.topic),
-    _SearchItem(
+    const _SearchItem(
         title: 'Main Examination',
         subtitle: 'Descriptive — advanced stage',
         category: 'Exam Stage',
         iconData: Icons.assignment_rounded,
         color: Color(0xFF1976D2),
         type: _Type.topic),
-    _SearchItem(
+    const _SearchItem(
         title: 'Interview',
         subtitle: 'Final personality test stage',
         category: 'Exam Stage',

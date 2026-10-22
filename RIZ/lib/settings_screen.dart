@@ -106,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FA),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -115,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             elevation: 0,
             systemOverlayStyle: SystemUiOverlayStyle.dark,
             leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_new_rounded,
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
                   color: Color(0xFF2196F3), size: 20),
               onPressed: () => Navigator.pop(context),
             ),
@@ -128,15 +128,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         fontFamily: 'Ubuntu',
                         fontWeight: FontWeight.w700,
                         fontSize: 18)),
-                Spacer(),
+                const Spacer(),
                 if (_saving)
-                  SizedBox(
+                  const SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Color(0xFF2196F3))),
                 if (!_saving)
-                  Icon(Icons.cloud_done_rounded,
+                  const Icon(Icons.cloud_done_rounded,
                       color: Color(0xFF2196F3), size: 20),
               ],
             ),
@@ -148,14 +148,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           else
             SliverList(
               delegate: SliverChildListDelegate([
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
 
                 // ── ACCOUNT ──────────────────────────────
                 _sectionHeader('Account'),
                 _card([
                   _navTile(
                     icon: Icons.person_outline_rounded,
-                    iconColor: Color(0xFF2196F3),
+                    iconColor: const Color(0xFF2196F3),
                     title: 'Edit Profile',
                     subtitle: 'Update your personal information',
                     onTap: () => _editProfile(),
@@ -167,7 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _card([
                   _switchTile(
                     icon: Icons.notifications_rounded,
-                    iconColor: Color(0xFF2196F3),
+                    iconColor: const Color(0xFF2196F3),
                     title: 'Push Notifications',
                     subtitle: 'Receive exam alerts and study reminders',
                     value: _notificationsEnabled,
@@ -178,10 +178,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         setState(() => _notificationsEnabled = granted);
                         await _save('notificationsEnabled', granted);
                         if (!granted && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text('Permission denied',
-                                  style: TextStyle(fontFamily: 'Ubuntu')),
-                              backgroundColor: Colors.red));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Permission denied',
+                                      style: TextStyle(fontFamily: 'Ubuntu')),
+                                  backgroundColor: Colors.red));
                         }
                       } else {
                         await NotificationService().disableNotifications();
@@ -279,7 +280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _card([
                   _navTile(
                     icon: Icons.category_rounded,
-                    iconColor: Color(0xFF2196F3),
+                    iconColor: const Color(0xFF2196F3),
                     title: 'Default Category',
                     subtitle: _defaultCategory,
                     onTap: () => _showCategoryPicker(),
@@ -334,7 +335,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () => _launchSupport()),
                 ]),
 
-                SizedBox(height: 40),
+                const SizedBox(height: 40),
               ]),
             ),
         ],
@@ -346,7 +347,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _sectionHeader(String title) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       child: Text(title.toUpperCase(),
           style: TextStyle(
               fontSize: 12,
@@ -360,7 +361,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _card(List<Widget> children) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -368,7 +369,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
-              offset: Offset(0, 4))
+              offset: const Offset(0, 4))
         ],
       ),
       child: Column(children: children),
@@ -384,7 +385,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required ValueChanged<bool> onChanged,
   }) {
     return ListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: _iconBox(icon, iconColor),
       title: Text(title,
           style: TextStyle(
@@ -400,7 +401,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Theme.of(context).colorScheme.onSurfaceVariant,
               fontFamily: 'Ubuntu')),
       trailing: Switch.adaptive(
-          value: value, onChanged: onChanged, activeColor: Color(0xFF2196F3)),
+          value: value,
+          onChanged: onChanged,
+          activeColor: const Color(0xFF2196F3)),
     );
   }
 
@@ -413,7 +416,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Color? titleColor,
   }) {
     return ListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: _iconBox(icon, iconColor),
       title: Text(title,
           style: TextStyle(
@@ -430,7 +433,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Theme.of(context).colorScheme.onSurfaceVariant,
               fontFamily: 'Ubuntu')),
       trailing: onTap != null
-          ? Icon(Icons.arrow_forward_ios_rounded,
+          ? const Icon(Icons.arrow_forward_ios_rounded,
               size: 14, color: Colors.black38)
           : null,
       onTap: onTap,
@@ -458,19 +461,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Container(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
                   color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(2))),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text('Choose Theme',
               style: TextStyle(
                   fontSize: 18,
@@ -478,13 +481,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   fontFamily: 'Ubuntu',
                   color: Theme.of(context).textTheme.bodyLarge?.color ??
                       Theme.of(context).colorScheme.onSurface)),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           // Theme options with icons so it's clear what each does
           _themeOption(ctx, 'System Default', Icons.brightness_auto_rounded,
               Colors.blueGrey),
           _themeOption(ctx, 'Light', Icons.light_mode_rounded, Colors.orange),
           _themeOption(ctx, 'Dark', Icons.dark_mode_rounded, Colors.indigo),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -508,7 +511,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               fontFamily: 'Ubuntu',
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500)),
       trailing: isSelected
-          ? Icon(Icons.check_circle_rounded, color: Color(0xFF2196F3))
+          ? const Icon(Icons.check_circle_rounded, color: Color(0xFF2196F3))
           : null,
       onTap: () async {
         // 1. Update UI state
@@ -528,7 +531,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: Theme.of(context).textTheme.bodyLarge?.color ??
                         Theme.of(context).colorScheme.onSurface)),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ));
         }
       },
@@ -549,19 +552,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Container(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
                   color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(2))),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text('Default Category',
               style: TextStyle(
                   fontSize: 18,
@@ -569,7 +572,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   fontFamily: 'Ubuntu',
                   color: Theme.of(context).textTheme.bodyLarge?.color ??
                       Theme.of(context).colorScheme.onSurface)),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           ...categories.map((cat) => ListTile(
                 title: Text(cat,
                     style: TextStyle(
@@ -577,7 +580,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Theme.of(context).textTheme.bodyLarge?.color ??
                             Theme.of(context).colorScheme.onSurface)),
                 trailing: _defaultCategory == cat
-                    ? Icon(Icons.check_rounded, color: Color(0xFF2196F3))
+                    ? const Icon(Icons.check_rounded, color: Color(0xFF2196F3))
                     : null,
                 onTap: () async {
                   setState(() => _defaultCategory = cat);
@@ -585,7 +588,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   await _save('defaultCategory', cat);
                 },
               )),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -603,19 +606,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Container(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
                   color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(2))),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text('App Language',
               style: TextStyle(
                   fontSize: 18,
@@ -623,15 +626,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   fontFamily: 'Ubuntu',
                   color: Theme.of(context).textTheme.bodyLarge?.color ??
                       Theme.of(context).colorScheme.onSurface)),
-          SizedBox(height: 4),
-          Padding(
+          const SizedBox(height: 4),
+          const Padding(
             padding: EdgeInsets.symmetric(horizontal: 24),
             child: Text('Choose your preferred language',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 12, color: Colors.grey, fontFamily: 'Ubuntu')),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           ...languages.entries.map((entry) => ListTile(
                 title: Text(entry.value,
                     style: TextStyle(
@@ -639,7 +642,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Theme.of(context).textTheme.bodyLarge?.color ??
                             Theme.of(context).colorScheme.onSurface)),
                 trailing: _language == entry.key
-                    ? Icon(Icons.check_rounded, color: Color(0xFF2196F3))
+                    ? const Icon(Icons.check_rounded, color: Color(0xFF2196F3))
                     : null,
                 onTap: () async {
                   setState(() => _language = entry.key);
@@ -656,12 +659,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       ?.color ??
                                   Theme.of(context).colorScheme.onSurface)),
                       backgroundColor: Colors.green,
-                      duration: Duration(seconds: 2),
+                      duration: const Duration(seconds: 2),
                     ));
                   }
                 },
               )),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -674,13 +677,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                     colors: [Color(0xFF2196F3), Color(0xFF1976D2)]),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text('RIZ',
+              child: const Text('RIZ',
                   style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -688,8 +691,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       letterSpacing: 2,
                       fontFamily: 'Ubuntu')),
             ),
-            SizedBox(width: 12),
-            Text('Learning Hub', style: TextStyle(fontFamily: 'Ubuntu')),
+            const SizedBox(width: 12),
+            const Text('Learning Hub', style: TextStyle(fontFamily: 'Ubuntu')),
           ],
         ),
         content: Column(
@@ -701,13 +704,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: Theme.of(context).textTheme.bodySmall?.color ??
                         Theme.of(context).colorScheme.onSurfaceVariant,
                     fontFamily: 'Ubuntu')),
-            SizedBox(height: 12),
-            Text(
+            const SizedBox(height: 12),
+            const Text(
               'Empowering aspirants to achieve their dreams through comprehensive exam preparation.',
               style: TextStyle(fontFamily: 'Ubuntu', fontSize: 13),
             ),
-            SizedBox(height: 16),
-            Text('Made with ❤️ for every achiever',
+            const SizedBox(height: 16),
+            const Text('Made with ❤️ for every achiever',
                 style: TextStyle(
                     color: Colors.orange,
                     fontWeight: FontWeight.w600,
@@ -718,7 +721,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: TextStyle(fontFamily: 'Ubuntu')),
+            child: const Text('Close', style: TextStyle(fontFamily: 'Ubuntu')),
           ),
         ],
       ),
@@ -784,7 +787,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _profileService.clearCache();
     await _loadSettings();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content:
               Text('Cache cleared ✅', style: TextStyle(fontFamily: 'Ubuntu')),
           backgroundColor: Colors.green));
@@ -805,7 +808,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _firebase.updateProfile(result);
       _profileService.clearCache();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('✅ Profile updated!',
                 style: TextStyle(fontFamily: 'Ubuntu')),
             backgroundColor: Colors.green));
@@ -876,17 +879,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: Text('Edit Profile',
+        title: const Text('Edit Profile',
             style:
                 TextStyle(fontFamily: 'Ubuntu', fontWeight: FontWeight.w700)),
-        backgroundColor: Color(0xFF2196F3),
+        backgroundColor: const Color(0xFF2196F3),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: ListView(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         children: [
           _buildTextField(
             label: 'Full Name',
@@ -894,13 +897,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             controller: _nameController,
             onChanged: (val) => _editedData['name'] = val,
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           _buildDropdown('Education', _educationLevels, 'education'),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           _buildDropdown('Exam Preparation', _examTypes, 'examPrep'),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           _buildDropdown('Target Year', _targetYears, 'targetYear'),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           _buildTextField(
             label: 'Study Goal',
             icon: Icons.flag_outlined,
@@ -911,7 +914,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 _editedData['studyGoal'] = val.isEmpty ? 'Not set' : val,
             maxLines: 2,
           ),
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
           ElevatedButton(
             onPressed: () {
               // Sync name controller value before popping
@@ -919,12 +922,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Navigator.pop(context, _editedData);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF2196F3),
-              padding: EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: const Color(0xFF2196F3),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('Save Changes',
+            child: const Text('Save Changes',
                 style: TextStyle(
                     fontSize: 16,
                     fontFamily: 'Ubuntu',
@@ -954,7 +957,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 fontFamily: 'Ubuntu',
                 color: Theme.of(context).textTheme.bodyLarge?.color ??
                     Theme.of(context).colorScheme.onSurface)),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           initialValue: controller == null ? initialValue : null,
@@ -965,7 +968,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               color: Theme.of(context).textTheme.bodyLarge?.color ??
                   Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: Color(0xFF2196F3), size: 20),
+            prefixIcon: Icon(icon, color: const Color(0xFF2196F3), size: 20),
             filled: true,
             fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
@@ -976,8 +979,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 borderSide: BorderSide(color: Theme.of(context).dividerColor)),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Color(0xFF2196F3), width: 2)),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                borderSide:
+                    const BorderSide(color: Color(0xFF2196F3), width: 2)),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),
       ],
@@ -995,9 +1000,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 fontFamily: 'Ubuntu',
                 color: Theme.of(context).textTheme.bodyLarge?.color ??
                     Theme.of(context).colorScheme.onSurface)),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -1019,7 +1024,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               items: options
                   .map((o) => DropdownMenuItem(
                       value: o,
-                      child: Text(o, style: TextStyle(fontFamily: 'Ubuntu'))))
+                      child: Text(o,
+                          style: const TextStyle(fontFamily: 'Ubuntu'))))
                   .toList(),
               onChanged: (v) =>
                   setState(() => _editedData[key] = v ?? 'Not set'),

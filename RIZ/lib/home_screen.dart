@@ -462,19 +462,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildExamCategories() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Exam Categories',
+          Text('Exam Categories',
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   fontFamily: 'Ubuntu',
                   color: Color(0xFF1565C0))),
-          const SizedBox(height: 14),
-          const CategoriesSection(),
+          SizedBox(height: 14),
+          CategoriesSection(),
         ],
       ),
     );

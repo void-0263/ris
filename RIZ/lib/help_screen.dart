@@ -892,7 +892,7 @@ class _HelpScreenState extends State<HelpScreen> {
     }
 
     // mail id, to not spam it tho...
-    final String emailAddress = 'rizlearning0263@gmail.com';
+    const String emailAddress = 'rizlearning0263@gmail.com';
     final String subject = Uri.encodeComponent('RIZ Learning Hub - $type');
     final String emailBody = Uri.encodeComponent(body);
 

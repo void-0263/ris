@@ -178,12 +178,12 @@ class RISApp extends StatelessWidget {
           ),
           // Switches, checkboxes
           switchTheme: SwitchThemeData(
-            thumbColor: MaterialStateProperty.resolveWith((s) =>
-                s.contains(MaterialState.selected)
+            thumbColor: WidgetStateProperty.resolveWith((s) =>
+                s.contains(WidgetState.selected)
                     ? const Color(0xFF2196F3)
                     : Colors.grey),
-            trackColor: MaterialStateProperty.resolveWith((s) =>
-                s.contains(MaterialState.selected)
+            trackColor: WidgetStateProperty.resolveWith((s) =>
+                s.contains(WidgetState.selected)
                     ? const Color(0xFF2196F3).withValues(alpha: 0.4)
                     : Colors.grey.withValues(alpha: 0.3)),
           ),
@@ -1827,9 +1827,9 @@ class _FeatureCardContentState extends State<_FeatureCardContent> {
 
   void _navigate(BuildContext context) {
     Widget? screen;
-    if (widget.title == 'Digital Flashcards')
+    if (widget.title == 'Digital Flashcards') {
       screen = const DigitalFlashcardsScreen();
-    else if (widget.title == "PYQ's")
+    } else if (widget.title == "PYQ's")
       screen = const PYQsScreen();
     else if (widget.title == 'Study Links') screen = const StudyVaultScreen();
     if (screen != null) {

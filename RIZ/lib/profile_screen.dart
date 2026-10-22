@@ -35,11 +35,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _loading = true);
     // forceRefresh: true — always get latest from Firestore, skip cache
     final data = await _profileService.getUserProfile(forceRefresh: true);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _profileData = data;
         _loading = false;
       });
+    }
   }
 
   String _getMemberSince() {
@@ -67,15 +68,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Logout', style: TextStyle(fontFamily: 'Ubuntu')),
-        content: Text('Are you sure?', style: TextStyle(fontFamily: 'Ubuntu')),
+        title: const Text('Logout', style: TextStyle(fontFamily: 'Ubuntu')),
+        content:
+            const Text('Are you sure?', style: TextStyle(fontFamily: 'Ubuntu')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel', style: TextStyle(fontFamily: 'Ubuntu'))),
+              child:
+                  const Text('Cancel', style: TextStyle(fontFamily: 'Ubuntu'))),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text('Logout',
+              child: const Text('Logout',
                   style: TextStyle(color: Colors.red, fontFamily: 'Ubuntu'))),
         ],
       ),
@@ -100,7 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -111,19 +114,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             children: [
               Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
                     IconButton(
-                      icon:
-                          Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                      icon: const Icon(Icons.arrow_back,
+                          color: Colors.white, size: 28),
                       onPressed: () => Navigator.pop(context),
                     ),
-                    Spacer(),
+                    const Spacer(),
                     TextButton.icon(
                       onPressed: _logout,
-                      icon: Icon(Icons.logout, color: Colors.white, size: 20),
-                      label: Text('Logout',
+                      icon: const Icon(Icons.logout,
+                          color: Colors.white, size: 20),
+                      label: const Text('Logout',
                           style: TextStyle(
                               color: Colors.white, fontFamily: 'Ubuntu')),
                     ),
@@ -132,23 +136,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               Expanded(
                 child: _loading
-                    ? Center(
+                    ? const Center(
                         child: CircularProgressIndicator(color: Colors.white))
                     : RefreshIndicator(
                         onRefresh: _loadProfile,
                         child: SingleChildScrollView(
                           physics: const BouncingScrollPhysics(),
-                          padding: EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(20),
                           child: Column(
                             children: [
                               _buildProfileHeader(),
-                              SizedBox(height: 24),
+                              const SizedBox(height: 24),
                               _buildAcademicProfile(),
-                              SizedBox(height: 24),
+                              const SizedBox(height: 24),
                               _buildUsageStatistics(),
-                              SizedBox(height: 24),
+                              const SizedBox(height: 24),
                               _buildSecuritySection(),
-                              SizedBox(height: 32),
+                              const SizedBox(height: 32),
                             ],
                           ),
                         ),
@@ -180,7 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final memberSince = _getMemberSince();
 
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
@@ -188,35 +192,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
-              offset: Offset(0, 10))
+              offset: const Offset(0, 10))
         ],
       ),
       child: Column(
         children: [
           CircleAvatar(
             radius: 50,
-            backgroundColor: Color(0xFF2196F3).withValues(alpha: 0.1),
+            backgroundColor: const Color(0xFF2196F3).withValues(alpha: 0.1),
             child: Text(
               name[0].toUpperCase(), // ✅ 'T' for Thiyagarajan, never 'U'
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 40,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF2196F3),
                   fontFamily: 'Ubuntu'),
             ),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(name, // ✅ Full name shown — e.g. "Thiyagarajan"
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Ubuntu')),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_outline, size: 14, color: Colors.grey),
-              SizedBox(width: 4),
+              const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
+              const SizedBox(width: 4),
               Text(maskedEmail,
                   style: TextStyle(
                       fontSize: 14,
@@ -225,20 +229,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fontFamily: 'Ubuntu')),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Color(0xFF2196F3).withValues(alpha: 0.1),
+              color: const Color(0xFF2196F3).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.calendar_today, size: 16, color: Color(0xFF2196F3)),
-                SizedBox(width: 8),
+                const Icon(Icons.calendar_today,
+                    size: 16, color: Color(0xFF2196F3)),
+                const SizedBox(width: 8),
                 Text('Member since $memberSince',
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Color(0xFF2196F3),
                         fontWeight: FontWeight.w600,
                         fontFamily: 'Ubuntu')),
@@ -252,7 +257,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildAcademicProfile() {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
@@ -260,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
-              offset: Offset(0, 10))
+              offset: const Offset(0, 10))
         ],
       ),
       child: Column(
@@ -268,8 +273,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.school, color: Color(0xFF2196F3), size: 24),
-              SizedBox(width: 12),
+              const Icon(Icons.school, color: Color(0xFF2196F3), size: 24),
+              const SizedBox(width: 12),
               Text('Academic Profile',
                   style: TextStyle(
                       fontSize: 20,
@@ -277,23 +282,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fontFamily: 'Ubuntu',
                       color: Theme.of(context).textTheme.bodyLarge?.color ??
                           Theme.of(context).colorScheme.onSurface)),
-              Spacer(),
+              const Spacer(),
               IconButton(
-                icon: Icon(Icons.edit, color: Color(0xFF2196F3)),
+                icon: const Icon(Icons.edit, color: Color(0xFF2196F3)),
                 onPressed: _editAcademicProfile,
               ),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           _buildInfoRow(
               Icons.book, 'Education', _profileData?['education'] ?? 'Not set'),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _buildInfoRow(Icons.workspace_premium, 'Exam Preparation',
               _profileData?['examPrep'] ?? 'Not set'),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _buildInfoRow(Icons.event, 'Target Year',
               _profileData?['targetYear'] ?? 'Not set'),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _buildInfoRow(Icons.flag, 'Study Goal',
               _profileData?['studyGoal'] ?? 'Not set'),
         ],
@@ -306,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final studyTime = _profileService.formatStudyTime(totalSeconds);
 
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
@@ -314,13 +319,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
-              offset: Offset(0, 10))
+              offset: const Offset(0, 10))
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
               Icon(Icons.analytics, color: Color(0xFF2196F3), size: 24),
               SizedBox(width: 12),
@@ -331,13 +336,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fontFamily: 'Ubuntu')),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
                   child: _buildStatCard(
                       studyTime, 'Study Time', Icons.timer, Colors.purple)),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                   child: _buildStatCard(
                       '${_profileData?['resourcesAccessed'] ?? 0}',
@@ -346,7 +351,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Colors.orange)),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -355,7 +360,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Questions\nFaced',
                       Icons.quiz,
                       Colors.blue)),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                   child: _buildStatCard(
                       '${_profileData?['currentStreak'] ?? 0} 🔥',
@@ -374,7 +379,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         (_profileData?['securityQuestions'] as List?)?.isNotEmpty ?? false;
 
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
@@ -382,13 +387,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
-              offset: Offset(0, 10))
+              offset: const Offset(0, 10))
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
               Icon(Icons.security, color: Color(0xFF2196F3), size: 24),
               SizedBox(width: 12),
@@ -399,7 +404,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fontFamily: 'Ubuntu')),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           _buildSecurityTile(
             icon: hasSecurityQuestions
                 ? Icons.check_circle_rounded
@@ -411,15 +416,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 : 'Not set up — tap to configure',
             onTap: () => _setupSecurityQuestions(),
           ),
-          Divider(height: 24),
+          const Divider(height: 24),
           _buildSecurityTile(
             icon: Icons.lock_reset_rounded,
-            iconColor: Color(0xFF2196F3),
+            iconColor: const Color(0xFF2196F3),
             title: 'Change Password',
             subtitle: 'Requires your current password',
             onTap: () => _showChangePasswordDialog(),
           ),
-          Divider(height: 24),
+          const Divider(height: 24),
           _buildSecurityTile(
             icon: Icons.delete_forever_rounded,
             iconColor: Colors.red,
@@ -445,18 +450,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(10),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: iconColor, size: 22),
             ),
-            SizedBox(width: 14),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,7 +495,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       children: [
         Icon(icon, size: 20, color: Colors.grey[600]),
-        SizedBox(width: 12),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,7 +506,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Theme.of(context).textTheme.bodySmall?.color ??
                           Theme.of(context).colorScheme.onSurfaceVariant,
                       fontFamily: 'Ubuntu')),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(value,
                   style: TextStyle(
                       fontSize: 16,
@@ -519,7 +524,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildStatCard(
       String value, String label, IconData icon, Color color) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -527,14 +532,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         children: [
           Icon(icon, color: color, size: 28),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(value,
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: color,
                   fontFamily: 'Ubuntu')),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(label,
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -559,7 +564,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
@@ -576,52 +581,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       decoration: BoxDecoration(
                           color: Theme.of(context).dividerColor,
                           borderRadius: BorderRadius.circular(2)))),
-              SizedBox(height: 20),
-              Text('Change Password',
+              const SizedBox(height: 20),
+              const Text('Change Password',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                       fontFamily: 'Ubuntu')),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text('Enter your current password first',
                   style: TextStyle(
                       fontSize: 13,
                       color: Theme.of(context).textTheme.bodySmall?.color ??
                           Theme.of(context).colorScheme.onSurfaceVariant,
                       fontFamily: 'Ubuntu')),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               if (error != null) ...[
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(children: [
-                    Icon(Icons.error_outline, color: Colors.red, size: 18),
-                    SizedBox(width: 8),
+                    const Icon(Icons.error_outline,
+                        color: Colors.red, size: 18),
+                    const SizedBox(width: 8),
                     Expanded(
                         child: Text(error!,
-                            style: TextStyle(
+                            style: const TextStyle(
                                 color: Colors.red,
                                 fontFamily: 'Ubuntu',
                                 fontSize: 13))),
                   ]),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
               ],
               _buildPassField('Current Password', oldPassCtrl, oldVisible,
                   () => setModalState(() => oldVisible = !oldVisible)),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               _buildPassField('New Password', newPassCtrl, newVisible,
                   () => setModalState(() => newVisible = !newVisible)),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               _buildPassField(
                   'Confirm New Password',
                   confirmPassCtrl,
                   confirmVisible,
                   () => setModalState(() => confirmVisible = !confirmVisible)),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -650,9 +656,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             if (ctx.mounted) Navigator.pop(ctx);
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(
-                                          '✅ Password changed!',
+                                  const SnackBar(
+                                      content: Text('✅ Password changed!',
                                           style:
                                               TextStyle(fontFamily: 'Ubuntu')),
                                       backgroundColor: Colors.green));
@@ -662,18 +667,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF2196F3),
-                    padding: EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: const Color(0xFF2196F3),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: loading
-                      ? SizedBox(
+                      ? const SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
-                      : Text('Change Password',
+                      : const Text('Change Password',
                           style: TextStyle(
                               fontFamily: 'Ubuntu',
                               color: Colors.white,
@@ -685,7 +690,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.pop(ctx);
                   _showForgotPasswordViaSecurityQuestions();
                 },
-                child: Text('Forgot current password? Use security questions',
+                child: const Text(
+                    'Forgot current password? Use security questions',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontSize: 12,
@@ -704,11 +710,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return TextField(
       controller: ctrl,
       obscureText: !visible,
-      style: TextStyle(fontFamily: 'Ubuntu'),
+      style: const TextStyle(fontFamily: 'Ubuntu'),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(fontFamily: 'Ubuntu', color: Colors.grey[600]),
-        prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF2196F3)),
+        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF2196F3)),
         suffixIcon: IconButton(
           icon: Icon(visible ? Icons.visibility_off : Icons.visibility,
               color: Colors.grey),
@@ -717,7 +723,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Color(0xFF2196F3), width: 2)),
+            borderSide: const BorderSide(color: Color(0xFF2196F3), width: 2)),
       ),
     );
   }
@@ -729,7 +735,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (questions.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text(
                 'No security questions set up. Please contact support.',
                 style: TextStyle(fontFamily: 'Ubuntu')),
@@ -748,7 +754,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
@@ -765,23 +771,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       decoration: BoxDecoration(
                           color: Theme.of(context).dividerColor,
                           borderRadius: BorderRadius.circular(2)))),
-              SizedBox(height: 20),
-              Text('Verify Identity',
+              const SizedBox(height: 20),
+              const Text('Verify Identity',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                       fontFamily: 'Ubuntu')),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Container(
-                padding: EdgeInsets.all(14),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.blue.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
                 ),
                 child: Row(children: [
-                  Icon(Icons.help_outline, color: Color(0xFF2196F3), size: 20),
-                  SizedBox(width: 10),
+                  const Icon(Icons.help_outline,
+                      color: Color(0xFF2196F3), size: 20),
+                  const SizedBox(width: 10),
                   Expanded(
                       child: Text(question['question'] as String,
                           style: TextStyle(
@@ -795,16 +802,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Theme.of(context).colorScheme.onSurface))),
                 ]),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               if (error != null) ...[
                 Text(error!,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.red, fontFamily: 'Ubuntu', fontSize: 13)),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
               ],
               TextField(
                 controller: answerCtrl,
-                style: TextStyle(fontFamily: 'Ubuntu'),
+                style: const TextStyle(fontFamily: 'Ubuntu'),
                 decoration: InputDecoration(
                   labelText: 'Your Answer',
                   labelStyle:
@@ -814,10 +821,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide:
-                          BorderSide(color: Color(0xFF2196F3), width: 2)),
+                          const BorderSide(color: Color(0xFF2196F3), width: 2)),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -839,7 +846,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 email: _currentUser!.email!);
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
+                                  const SnackBar(
                                       content: Text(
                                           '✅ Password reset email sent!',
                                           style:
@@ -852,18 +859,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF2196F3),
-                    padding: EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: const Color(0xFF2196F3),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: loading
-                      ? SizedBox(
+                      ? const SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
-                      : Text('Verify & Reset Password',
+                      : const Text('Verify & Reset Password',
                           style: TextStyle(
                               fontFamily: 'Ubuntu',
                               color: Colors.white,
@@ -887,7 +894,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
@@ -904,28 +911,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       decoration: BoxDecoration(
                           color: Theme.of(context).dividerColor,
                           borderRadius: BorderRadius.circular(2)))),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Row(children: [
                 Container(
-                  padding: EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.delete_forever_rounded,
+                  child: const Icon(Icons.delete_forever_rounded,
                       color: Colors.red, size: 24),
                 ),
-                SizedBox(width: 12),
-                Text('Delete Account',
+                const SizedBox(width: 12),
+                const Text('Delete Account',
                     style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                         fontFamily: 'Ubuntu',
                         color: Colors.red)),
               ]),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Container(
-                padding: EdgeInsets.all(14),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.red.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
@@ -941,16 +948,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 1.5),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               if (error != null) ...[
                 Text(error!,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.red, fontFamily: 'Ubuntu', fontSize: 13)),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
               ],
               _buildPassField('Enter your password to confirm', passCtrl,
                   visible, () => setModalState(() => visible = !visible)),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -987,17 +994,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
-                    padding: EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   child: loading
-                      ? SizedBox(
+                      ? const SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
-                      : Text('Delete My Account',
+                      : const Text('Delete My Account',
                           style: TextStyle(
                               fontFamily: 'Ubuntu',
                               color: Colors.white,
@@ -1075,12 +1082,12 @@ class _SecurityQuestionsSetupScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
               color: Color(0xFF2196F3), size: 20),
           onPressed: () => Navigator.pop(context),
         ),
@@ -1093,18 +1100,19 @@ class _SecurityQuestionsSetupScreenState
                 fontSize: 18)),
       ),
       body: ListView(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         children: [
           Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.blue.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
             ),
             child: Row(children: [
-              Icon(Icons.info_outline, color: Color(0xFF2196F3), size: 20),
-              SizedBox(width: 10),
+              const Icon(Icons.info_outline,
+                  color: Color(0xFF2196F3), size: 20),
+              const SizedBox(width: 10),
               Expanded(
                   child: Text(
                       'Security questions are used to verify your identity if you forget your password.',
@@ -1116,37 +1124,38 @@ class _SecurityQuestionsSetupScreenState
                           height: 1.5))),
             ]),
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           if (_error != null) ...[
             Text(_error!,
-                style: TextStyle(color: Colors.red, fontFamily: 'Ubuntu')),
-            SizedBox(height: 12),
+                style:
+                    const TextStyle(color: Colors.red, fontFamily: 'Ubuntu')),
+            const SizedBox(height: 12),
           ],
           _buildQuestionPicker('Question 1', _availableQuestions, _selectedQ1,
               (v) => setState(() => _selectedQ1 = v), _answer1Ctrl),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           _buildQuestionPicker(
               'Question 2',
               _availableQuestions.where((q) => q != _selectedQ1).toList(),
               _selectedQ2,
               (v) => setState(() => _selectedQ2 = v),
               _answer2Ctrl),
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
           ElevatedButton(
             onPressed: _loading ? null : _save,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF2196F3),
-              padding: EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: const Color(0xFF2196F3),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
             ),
             child: _loading
-                ? SizedBox(
+                ? const SizedBox(
                     height: 20,
                     width: 20,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white))
-                : Text('Save Security Questions',
+                : const Text('Save Security Questions',
                     style: TextStyle(
                         fontFamily: 'Ubuntu',
                         color: Colors.white,
@@ -1174,9 +1183,9 @@ class _SecurityQuestionsSetupScreenState
                 fontFamily: 'Ubuntu',
                 color: Theme.of(context).textTheme.bodyLarge?.color ??
                     Theme.of(context).colorScheme.onSurface)),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
@@ -1198,17 +1207,17 @@ class _SecurityQuestionsSetupScreenState
                   .map((q) => DropdownMenuItem(
                       value: q,
                       child: Text(q,
-                          style:
-                              TextStyle(fontFamily: 'Ubuntu', fontSize: 13))))
+                          style: const TextStyle(
+                              fontFamily: 'Ubuntu', fontSize: 13))))
                   .toList(),
               onChanged: onChanged,
             ),
           ),
         ),
-        SizedBox(height: 10),
+        const SizedBox(height: 10),
         TextField(
           controller: answerCtrl,
-          style: TextStyle(fontFamily: 'Ubuntu'),
+          style: const TextStyle(fontFamily: 'Ubuntu'),
           decoration: InputDecoration(
             labelText: 'Your Answer',
             labelStyle:
@@ -1223,7 +1232,8 @@ class _SecurityQuestionsSetupScreenState
                 borderSide: BorderSide(color: Theme.of(context).dividerColor)),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Color(0xFF2196F3), width: 2)),
+                borderSide:
+                    const BorderSide(color: Color(0xFF2196F3), width: 2)),
           ),
         ),
       ],
@@ -1255,7 +1265,7 @@ class _SecurityQuestionsSetupScreenState
     ]);
     if (mounted) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('✅ Security questions saved!',
               style: TextStyle(fontFamily: 'Ubuntu')),
           backgroundColor: Colors.green));
@@ -1305,30 +1315,31 @@ class _AcademicProfileEditorState extends State<AcademicProfileEditor> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Edit Profile', style: TextStyle(fontFamily: 'Ubuntu')),
-        backgroundColor: Color(0xFF2196F3),
+        title:
+            const Text('Edit Profile', style: TextStyle(fontFamily: 'Ubuntu')),
+        backgroundColor: const Color(0xFF2196F3),
         foregroundColor: Colors.white,
       ),
       body: ListView(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         children: [
           _buildDropdown('Education', _educationLevels, 'education'),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           _buildDropdown('Exam Prep', _examTypes, 'examPrep'),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           _buildDropdown('Target Year', _targetYears, 'targetYear'),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           _buildTextField('Study Goal', 'studyGoal'),
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, _editedData),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF2196F3),
-              padding: EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: const Color(0xFF2196F3),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('Save',
+            child: const Text('Save',
                 style: TextStyle(
                     fontSize: 16, fontFamily: 'Ubuntu', color: Colors.white)),
           ),
@@ -1348,18 +1359,18 @@ class _AcademicProfileEditorState extends State<AcademicProfileEditor> {
                 fontFamily: 'Ubuntu',
                 color: Theme.of(context).textTheme.bodyLarge?.color ??
                     Theme.of(context).colorScheme.onSurface)),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: _editedData[key] == 'Not set' ? null : _editedData[key],
+          initialValue: _editedData[key] == 'Not set' ? null : _editedData[key],
           decoration: InputDecoration(
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
           items: options
               .map((o) => DropdownMenuItem(
                   value: o,
-                  child: Text(o, style: TextStyle(fontFamily: 'Ubuntu'))))
+                  child: Text(o, style: const TextStyle(fontFamily: 'Ubuntu'))))
               .toList(),
           onChanged: (v) => setState(() => _editedData[key] = v ?? 'Not set'),
         ),
@@ -1378,14 +1389,14 @@ class _AcademicProfileEditorState extends State<AcademicProfileEditor> {
                 fontFamily: 'Ubuntu',
                 color: Theme.of(context).textTheme.bodyLarge?.color ??
                     Theme.of(context).colorScheme.onSurface)),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         TextFormField(
           initialValue: _editedData[key] == 'Not set' ? '' : _editedData[key],
           decoration: InputDecoration(
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
           onChanged: (v) => _editedData[key] = v.isEmpty ? 'Not set' : v,
         ),
       ],
@@ -1460,12 +1471,12 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
         await _auth
             .signInWithEmailAndPassword(
                 email: _emailCtrl.text.trim(), password: _passwordCtrl.text)
-            .timeout(Duration(seconds: 10));
+            .timeout(const Duration(seconds: 10));
       } else {
         final cred = await _auth
             .createUserWithEmailAndPassword(
                 email: _emailCtrl.text.trim(), password: _passwordCtrl.text)
-            .timeout(Duration(seconds: 10));
+            .timeout(const Duration(seconds: 10));
 
         // ✅ Set Auth displayName — do this first, it's fast
         await cred.user?.updateDisplayName(_nameCtrl.text.trim());
@@ -1524,7 +1535,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(msg, style: TextStyle(fontFamily: 'Ubuntu')),
+        content: Text(msg, style: const TextStyle(fontFamily: 'Ubuntu')),
         backgroundColor: Colors.red));
   }
 
@@ -1532,7 +1543,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -1544,26 +1555,27 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
               Align(
                   alignment: Alignment.topLeft,
                   child: IconButton(
-                      icon:
-                          Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                      icon: const Icon(Icons.arrow_back,
+                          color: Colors.white, size: 28),
                       onPressed: () => Navigator.pop(context))),
               Expanded(
                 child: Center(
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(24),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         children: [
-                          Icon(Icons.person, size: 80, color: Colors.white),
-                          SizedBox(height: 24),
+                          const Icon(Icons.person,
+                              size: 80, color: Colors.white),
+                          const SizedBox(height: 24),
                           Text(_isLogin ? 'Welcome Back!' : 'Create Account',
-                              style: TextStyle(
+                              style: const TextStyle(
                                   fontSize: 32,
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
                                   fontFamily: 'Ubuntu')),
-                          SizedBox(height: 32),
+                          const SizedBox(height: 32),
                           if (!_isLogin) ...[
                             _buildField(
                                 controller: _nameCtrl,
@@ -1571,7 +1583,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                                 icon: Icons.person_outline,
                                 validator: (v) =>
                                     v!.isEmpty ? 'Enter name' : null),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                           ],
                           _buildField(
                               controller: _emailCtrl,
@@ -1580,7 +1592,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                               keyboardType: TextInputType.emailAddress,
                               validator: (v) =>
                                   !v!.contains('@') ? 'Invalid email' : null),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           _buildField(
                               controller: _passwordCtrl,
                               label: 'Password',
@@ -1590,7 +1602,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                                   () => _obscurePassword = !_obscurePassword),
                               validator: (v) =>
                                   v!.length < 6 ? 'Min 6 chars' : null),
-                          SizedBox(height: 12),
+                          const SizedBox(height: 12),
                           if (_isLogin)
                             Row(children: [
                               Checkbox(
@@ -1598,16 +1610,16 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                                   onChanged: (val) => setState(
                                       () => _rememberMe = val ?? false),
                                   activeColor: Colors.white,
-                                  checkColor: Color(0xFF2196F3),
-                                  side: BorderSide(
+                                  checkColor: const Color(0xFF2196F3),
+                                  side: const BorderSide(
                                       color: Colors.white70, width: 2)),
-                              Text('Remember Me',
+                              const Text('Remember Me',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontFamily: 'Ubuntu',
                                       fontSize: 14)),
                             ]),
-                          SizedBox(height: 20),
+                          const SizedBox(height: 20),
                           SizedBox(
                             width: double.infinity,
                             height: 56,
@@ -1615,29 +1627,29 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                               onPressed: _isLoading ? null : _handleAuth,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
-                                foregroundColor: Color(0xFF2196F3),
+                                foregroundColor: const Color(0xFF2196F3),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16)),
                                 elevation: 8,
                               ),
                               child: _isLoading
-                                  ? CircularProgressIndicator(
+                                  ? const CircularProgressIndicator(
                                       color: Color(0xFF2196F3), strokeWidth: 2)
                                   : Text(_isLogin ? 'Login' : 'Sign Up',
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w700,
                                           fontFamily: 'Ubuntu')),
                             ),
                           ),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           GestureDetector(
                             onTap: () => setState(() => _isLogin = !_isLogin),
                             child: Text(
                                 _isLogin
                                     ? "Don't have an account? Sign Up"
                                     : 'Already have an account? Login',
-                                style: TextStyle(
+                                style: const TextStyle(
                                     color: Colors.white70,
                                     fontFamily: 'Ubuntu')),
                           ),
@@ -1667,11 +1679,12 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
-      style: TextStyle(color: Colors.white, fontFamily: 'Ubuntu'),
+      style: const TextStyle(color: Colors.white, fontFamily: 'Ubuntu'),
       validator: validator,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white70, fontFamily: 'Ubuntu'),
+        labelStyle:
+            const TextStyle(color: Colors.white70, fontFamily: 'Ubuntu'),
         prefixIcon: Icon(icon, color: Colors.white70),
         suffixIcon: toggleObscure != null
             ? IconButton(
@@ -1683,14 +1696,14 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
         fillColor: Colors.white.withValues(alpha: 0.1),
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: Colors.white30)),
+            borderSide: const BorderSide(color: Colors.white30)),
         enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: Colors.white30)),
+            borderSide: const BorderSide(color: Colors.white30)),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: Colors.white, width: 2)),
-        errorStyle: TextStyle(fontFamily: 'Ubuntu'),
+            borderSide: const BorderSide(color: Colors.white, width: 2)),
+        errorStyle: const TextStyle(fontFamily: 'Ubuntu'),
       ),
     );
   }

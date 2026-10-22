@@ -213,10 +213,12 @@ class _DigitalFlashcardsScreenState extends State<DigitalFlashcardsScreen> {
 
   Stream<QuerySnapshot> _getFilteredCards() {
     Query q = _db.collection('flashcards');
-    if (_selectedCategory != 'All')
+    if (_selectedCategory != 'All') {
       q = q.where('category', isEqualTo: _selectedCategory);
-    if (_selectedDifficulty != 'All')
+    }
+    if (_selectedDifficulty != 'All') {
       q = q.where('difficulty', isEqualTo: _selectedDifficulty);
+    }
     return q.limit(100).snapshots();
   }
 
@@ -669,10 +671,11 @@ class _FlashcardReviewScreenState extends State<FlashcardReviewScreen>
   void _respond(bool knew) {
     HapticFeedback.mediumImpact();
     setState(() {
-      if (knew)
+      if (knew) {
         _known++;
-      else
+      } else {
         _unknown++;
+      }
       if (_currentIndex < widget.cards.length - 1) {
         _currentIndex++;
         _isFlipped = false;

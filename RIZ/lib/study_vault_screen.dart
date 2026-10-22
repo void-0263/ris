@@ -449,7 +449,7 @@ class _StudyVaultScreenState extends State<StudyVaultScreen> {
   }
 
   Future<void> _bookmarkLink(String linkId) async {
-    final userId = 'user123'; // Replace with actual user ID from Firebase Auth
+    const userId = 'user123'; // Replace with actual user ID from Firebase Auth
     await _db
         .collection('userStudyLinkBookmarks')
         .doc(userId)

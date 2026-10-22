@@ -257,8 +257,9 @@ class _PYQsScreenState extends State<PYQsScreen>
     Query q = _db.collection('pyqs');
     if (_selectedExam != 'All') q = q.where('exam', isEqualTo: _selectedExam);
     if (_selectedYear != 'All') q = q.where('year', isEqualTo: _selectedYear);
-    if (_selectedSubject != 'All')
+    if (_selectedSubject != 'All') {
       q = q.where('subject', isEqualTo: _selectedSubject);
+    }
     return q.limit(1000).snapshots();
   }
 
@@ -1012,8 +1013,8 @@ class PYQPracticeScreen extends StatefulWidget {
 class _PYQPracticeScreenState extends State<PYQPracticeScreen> {
   List<Map<String, dynamic>> _questions = [];
   int _currentIndex = 0;
-  Map<int, int> _answers = {};
-  Map<int, bool> _marked = {};
+  final Map<int, int> _answers = {};
+  final Map<int, bool> _marked = {};
   bool _isLoading = true;
   bool _isSubmitted = false;
   bool _showExplanation = false;
